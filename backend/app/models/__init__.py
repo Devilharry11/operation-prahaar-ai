@@ -1,3 +1,61 @@
 """
-Operation Prahaar AI - SQLAlchemy ORM Data Models Package
+Operation Prahaar AI - Models Package Initializer
 """
+
+from backend.app.models.enums import (
+    SeverityLevel,
+    ReviewStatus,
+    IncidentStatus,
+    UncertaintyLevel,
+    CameraStatus,
+    DeviceType,
+    EventType,
+    AdvisoryThreatLevel,
+    EvidenceType,
+    AuditAction,
+)
+from backend.app.models.entities import (
+    Organization,
+    Role,
+    Permission,
+    User,
+    Location,
+    EdgeDevice,
+    Camera,
+    CameraEvent,
+    Incident,
+    Alert,
+    SecurityAdvisory,
+    Evidence,
+    HumanReview,
+    Approval,
+    AuditLog,
+)
+
+__all__ = [
+    "SeverityLevel",
+    "ReviewStatus",
+    "IncidentStatus",
+    "UncertaintyLevel",
+    "CameraStatus",
+    "DeviceType",
+    "EventType",
+    "AdvisoryThreatLevel",
+    "EvidenceType",
+    "AuditAction",
+    "Organization",
+    "Role",
+    "Permission",
+    "User",
+    "Location",
+    "EdgeDevice",
+    "Camera",
+    "CameraEvent",
+    "Incident",
+    "Alert",
+    "SecurityAdvisory",
+    "Evidence",
+    "HumanReview",
+    "Approval",
+    "AuditLog",
+]
