@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0A0D0B;
+    color: #E2E8F0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D130F;
+}
+::-webkit-scrollbar-thumb {
+  background: #233527;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #344D39;
+}
+
+/* Radar Pulse Animation */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.radar-sweep-anim {
+  animation: radar-sweep 4s linear infinite;
+}
