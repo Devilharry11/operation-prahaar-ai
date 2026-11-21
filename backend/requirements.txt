@@ -1,0 +1,21 @@
+# ==========================================================
+# OPERATION PRAHAAR AI - BACKEND DEPENDENCIES
+# Optimized for Windows, Python 3.10+, and 8 GB RAM (Zero-Cost)
+# ==========================================================
+
+# Core Web Framework & ASGI Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Database & ORM (Local SQLite - ₹0 cost)
+sqlalchemy>=2.0.30
+
+# Data Validation & Configuration
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+
+# Utilities & Networking
+python-multipart>=0.0.9
+aiofiles>=24.1.0
+requests>=2.31.0
+python-dotenv>=1.0.1
