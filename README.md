@@ -188,11 +188,14 @@ Follow these 5 interactive demonstration steps during evaluation:
 
 ---
 
-## 7. Key Documentation & Hackathon Artifacts
+## 7. Key Documentation & Academic Defense Artifacts
 
-For comprehensive evaluation, review the following documents:
+For comprehensive evaluation and academic defense, review the following documents:
+- [Academic Defense Presentation (10 Slides)](file:///docs/OPERATION_PRAHAAR_AI_PRESENTATION.md): 10-slide technical and conceptual defense deck.
+- [Professor Live Demo Script (5 Mins)](file:///docs/PROFESSOR_LIVE_DEMO_SCRIPT.md): Minute-by-minute evaluator walkthrough guide.
+- [Professor Defense Q&A (25 Questions)](file:///docs/PROFESSOR_QUESTIONS_AND_ANSWERS.md): Rigorous technical answers covering architecture, XAI, HITL, cryptography, and ethics.
+- [Project Executive One-Page Summary](file:///docs/PROJECT_ONE_PAGE_SUMMARY.md): Complete one-page overview for reviewers.
 - [System Architecture](file:///docs/FINAL_PROJECT_ARCHITECTURE.md): Complete end-to-end technical specification.
-- [Hackathon Demo Guide](file:///docs/HACKATHON_DEMO_GUIDE.md): 5-minute evaluator and judge script.
 - [Security & Responsible AI Review](file:///docs/FINAL_SECURITY_REVIEW.md): In-depth security, RBAC authorization, and ethical guardrail analysis.
 - [Final Test Report](file:///docs/FINAL_TEST_REPORT.md): 56/56 unit, integration, and browser verification test matrix.
 - [Known Limitations & Roadmap](file:///docs/KNOWN_LIMITATIONS.md): Transparent operational boundaries and hardware transition roadmap.
