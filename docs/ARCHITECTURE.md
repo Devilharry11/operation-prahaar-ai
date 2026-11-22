@@ -108,3 +108,39 @@ The database consists of 14 core entities:
 | **Edge -> Backend** | HTTP/REST (POST) | JSON Payload | Shared Device Token + Signature |
 | **Backend -> Frontend** | HTTP/REST + Polling/SSE | JSON | Bearer JWT / Session Header |
 | **Frontend -> Backend** | HTTP/REST (PATCH/POST) | JSON | Role-Checked Operator Auth |
+
+---
+
+## 5. Phase B Synthetic Demo Controller & Security Sign-Off Status
+
+### A. Current Implementation Status
+- **Phase B Status:** **COMPLETE FOR STUDENT SYNTHETIC PROTOTYPE**
+- **Authentication:** **DEVELOPMENT-ONLY** (Badge-based header validation against local SQLite `users` table; **NOT PRODUCTION-GRADE**)
+- **Production Readiness:** **NOT APPROVED** (Prototype decision-support demonstration only; no live defence or police deployment integration)
+- **Phase C Status:** **NOT STARTED**
+
+### B. Verified Security & Reliability Controls
+1. **Backend Authentication & Authorization:**
+   - All demo endpoints (`/api/v1/demo/*`) enforce operator authentication via `get_current_operator`.
+   - Destructive reset (`POST /api/v1/demo/reset`) strictly enforces `CHIEF_CONTROLLER` or `COMMAND_OPERATOR` roles via `require_demo_reset_permission`. Unauthorized roles receive `HTTP 403 Forbidden`.
+   - Server-side administrative toggle (`DEMO_RESET_ALLOWED`) enforces configuration blocks independently of client inputs.
+2. **Synthetic Data Isolation & Conflict Safety:**
+   - Reset queries require multi-condition verification (`DEMO-INC-%` + `DEMO_%` rules for incidents; `DEMO-ALT-%` + `SYNTHETIC_DEMO_ALERT` for alerts).
+   - Pre-deletion conflict checks immediately abort with `HTTP 409 Conflict` if any non-demo alert or formal `Approval` record is linked to a demo incident.
+   - Baseline operational records (`INC-2026-0001`, `ALT-2026-0001`, cameras, edge nodes) are strictly preserved.
+3. **Atomic Transaction Rollback:**
+   - Deletions and audit ledger insertion are wrapped in an explicit `try ... except Exception: db.rollback(); raise` block.
+   - Audit records are committed atomically only upon successful deletion. No orphan records or misleading audit entries can persist after failure.
+4. **Honest Frontend Mutation Handling:**
+   - Mutations (`POST /demo/generate`, `POST /demo/generate-batch`, `POST /demo/reset`) throw real errors via `fetchMutation`.
+   - Deceptive fallback success banners are eliminated. Errors are displayed explicitly in the UI without triggering unauthorized dashboard refreshes.
+   - Successful responses display an explicit `DATABASE CONFIRMED • PERSISTED` badge.
+5. **Audit Ledger Attribution:**
+   - Audit actor identity is derived strictly from the authenticated backend user (`current_user.badge_number`), preventing client forgery.
+   - Reset audit logs record exact lists of purged record codes (`deleted_incident_codes`, `deleted_alert_codes`).
+
+### C. Remaining Technical Improvements (Future Roadmap)
+1. **Test Environment Isolation:** Transition automated unit test suites to use an ephemeral in-memory SQLite database (`sqlite:///:memory:`) to ensure zero interaction with local workspace databases.
+2. **Dedicated Entity Markers:** Add explicit, indexed boolean columns (`is_synthetic_demo: Boolean = Column(Boolean, default=False, nullable=False, index=True)`) across `Incident`, `Alert`, and `CameraEvent` entities during future schema migrations.
+3. **Production Identity Provider:** Replace development badge-matching with OAuth2 / OIDC mutual TLS and cryptographically signed, short-lived JWT tokens before public exposure.
+

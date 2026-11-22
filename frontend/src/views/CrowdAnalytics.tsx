@@ -1,7 +1,8 @@
-// Operation Prahaar AI - 4. Crowd Analytics View
+// Operation Prahaar AI - Crowd Analytics (Enterprise SOC Redesign)
 import React from 'react';
 import { Users, TrendingUp, AlertTriangle, Shield, Clock } from 'lucide-react';
 import { CameraEvent } from '../types';
+import { SectionHeader, MetricCard } from '../components/Common';
 
 interface CrowdAnalyticsProps {
   events: CameraEvent[];
@@ -9,48 +10,54 @@ interface CrowdAnalyticsProps {
 
 export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-          <Users className="w-5 h-5 text-emerald-400" />
-          <span>Crowd Analytics & Flow Intelligence</span>
-        </h2>
-        <p className="text-xs text-gray-400 mt-1">
-          Non-identifying spatial crowd density estimation, flow anomalies, and bottleneck detection.
-        </p>
-      </div>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <SectionHeader
+        title="Crowd Dynamics & Flow Analytics"
+        subtitle="Spatial density estimation and crowd congestion monitoring without facial recognition."
+        icon={Users}
+        actions={
+          <span className="text-[11px] font-mono bg-blue-950/40 text-blue-300 border border-blue-800/60 px-2 py-1 rounded">
+            [PROTOTYPE VISUALIZATION]
+          </span>
+        }
+      />
 
-      {/* Analytics Summary Cards */}
+      {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#111713] border border-[#27382B] rounded-lg p-4">
-          <span className="text-xs font-mono uppercase text-gray-400">Peak Congestion Ratio</span>
-          <div className="text-2xl font-mono font-bold text-amber-400 mt-1">84.2%</div>
-          <span className="text-[11px] text-gray-400 mt-1 block">Platform 1 Concourse (NDLS)</span>
-        </div>
-        <div className="bg-[#111713] border border-[#27382B] rounded-lg p-4">
-          <span className="text-xs font-mono uppercase text-gray-400">Dispersal Velocity Index</span>
-          <div className="text-2xl font-mono font-bold text-emerald-400 mt-1">Nominal (1.2 m/s)</div>
-          <span className="text-[11px] text-gray-400 mt-1 block">No stampede velocity anomaly</span>
-        </div>
-        <div className="bg-[#111713] border border-[#27382B] rounded-lg p-4">
-          <span className="text-xs font-mono uppercase text-gray-400">Surge Risk Probability</span>
-          <div className="text-2xl font-mono font-bold text-amber-400 mt-1">Elevated (78%)</div>
-          <span className="text-[11px] text-gray-400 mt-1 block">Train arrival bottleneck window</span>
-        </div>
+        <MetricCard
+          label="Peak Congestion Ratio"
+          value="84.2%"
+          subValue="Platform 1 Concourse (NDLS)"
+          icon={TrendingUp}
+          variant="amber"
+        />
+        <MetricCard
+          label="Dispersal Velocity Index"
+          value="1.2 m/s"
+          subValue="Nominal pedestrian flow"
+          icon={Users}
+          variant="green"
+        />
+        <MetricCard
+          label="Surge Risk Probability"
+          value="Elevated (78%)"
+          subValue="Train arrival bottleneck window"
+          icon={AlertTriangle}
+          variant="amber"
+        />
       </div>
 
       {/* Simulated Time-Series Density Chart */}
-      <div className="bg-[#111713] border border-[#27382B] rounded-lg p-5">
-        <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#27382B]">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-            Spatial Density Trend (Past 60 Minutes)
+      <div className="bg-[#151D25] border border-[#2A3540] rounded-lg p-5 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-[#2A3540]">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+            Spatial Density History (Past 60 Minutes)
           </h3>
-          <span className="text-xs font-mono text-emerald-400">Sampling Rate: 5 FPS</span>
+          <span className="text-xs font-mono text-emerald-400">5 FPS Frame Sampling</span>
         </div>
 
-        {/* CSS Bar Chart Simulation */}
-        <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 bg-[#0D1410] rounded border border-[#27382B]">
+        {/* CSS Bar Chart with enterprise slate background */}
+        <div className="h-44 flex items-end justify-between gap-1 pt-6 px-3 bg-[#10161C] rounded border border-[#2A3540]">
           {[35, 42, 38, 45, 52, 48, 62, 70, 78, 84, 82, 79, 75, 68, 60, 58, 64, 72, 80, 84].map(
             (val, idx) => {
               const isAlert = val >= 75;
@@ -62,14 +69,14 @@ export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
                       isAlert ? 'bg-amber-400 hover:bg-amber-300' : 'bg-emerald-600 hover:bg-emerald-500'
                     }`}
                   ></div>
-                  <span className="text-[9px] font-mono text-gray-400">-{20 - idx}m</span>
+                  <span className="text-[9px] font-mono text-[#94A3B8]">-{20 - idx}m</span>
                 </div>
               );
             }
           )}
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-xs text-gray-400 font-mono">
+        <div className="flex items-center justify-between text-xs text-[#94A3B8] font-sans">
           <div className="flex items-center space-x-4">
             <span className="flex items-center space-x-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600"></span>
@@ -80,7 +87,7 @@ export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
               <span>Congestion Threshold (&ge;75%)</span>
             </span>
           </div>
-          <span>Decision Support Analytics • Operation Prahaar AI</span>
+          <span className="font-mono text-[11px]">Decision Support Telemetry • Prahaar AI</span>
         </div>
       </div>
     </div>

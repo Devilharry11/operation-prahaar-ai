@@ -21,6 +21,10 @@ class Settings:
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
     SECRET_KEY: str = os.getenv("SECRET_KEY", "prahaar-prototype-dev-secret-key-change-in-production-2026")
 
+    # Demo Controller Configuration (Prototype Evaluation Controls)
+    DEMO_CONTROLLER_ENABLED: bool = os.getenv("DEMO_CONTROLLER_ENABLED", "True").lower() in ("true", "1", "yes")
+    DEMO_RESET_ALLOWED: bool = os.getenv("DEMO_RESET_ALLOWED", "True").lower() in ("true", "1", "yes")
+
     # Database Configuration (Local SQLite for ₹0 cost laptop development)
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./prahaar.db")
 

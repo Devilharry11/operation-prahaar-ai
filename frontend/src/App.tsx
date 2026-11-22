@@ -14,6 +14,7 @@ import { HumanVerification } from './views/HumanVerification';
 import { AuditLogs } from './views/AuditLogs';
 import { EdgeDeviceManagement } from './views/EdgeDeviceManagement';
 import { SystemSettings } from './views/SystemSettings';
+import { DemoControllerModal } from './components/DemoControllerModal';
 import { PrahaarAPI } from './services/api';
 import {
   SystemHealth,
@@ -36,6 +37,7 @@ export const App: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [advisories, setAdvisories] = useState<SecurityAdvisory[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState<boolean>(false);
 
   // Load all telemetry & domain data
   const loadData = async () => {
@@ -73,9 +75,14 @@ export const App: React.FC = () => {
   const activeAlertCount = alerts.length;
 
   return (
-    <div className="min-h-screen bg-[#0A0D0B] text-gray-200 flex flex-col font-sans">
-      {/* Tactical Top Header */}
-      <Header health={health} unverifiedCount={unverifiedCount} />
+    <div className="min-h-screen bg-[#0A0D0E] text-[#F1F5F9] flex flex-col font-sans selection:bg-emerald-800 selection:text-white">
+      {/* Modern Enterprise SOC Top Header */}
+      <Header
+        health={health}
+        unverifiedCount={unverifiedCount}
+        onNavigateToReviews={() => setCurrentView('human-verification')}
+        onOpenDemoController={() => setIsDemoModalOpen(true)}
+      />
 
       {/* Main Command Center Body */}
       <div className="flex flex-1 overflow-hidden">
@@ -87,8 +94,8 @@ export const App: React.FC = () => {
           activeAlertCount={activeAlertCount}
         />
 
-        {/* Dynamic Section View */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[#0E1410]">
+        {/* Dynamic Section Workspace */}
+        <main className="flex-1 overflow-y-auto p-6 bg-[#0A0D0E]">
           {currentView === 'overview' && (
             <OverviewDashboard
               cameras={cameras}
@@ -96,23 +103,17 @@ export const App: React.FC = () => {
               alerts={alerts}
               edgeDevices={edgeDevices}
               events={events}
+              auditLogs={auditLogs}
+              health={health}
               onNavigate={setCurrentView}
             />
           )}
-
-          {currentView === 'cameras' && <CameraManagement cameras={cameras} />}
-
-          {currentView === 'video-monitor' && <LiveVideoMonitoring cameras={cameras} />}
-
-          {currentView === 'crowd-analytics' && <CrowdAnalytics events={events} />}
 
           {currentView === 'safety-events' && <SafetyEvents events={events} />}
 
           {currentView === 'incidents' && (
             <IncidentManagement incidents={incidents} onNavigate={setCurrentView} />
           )}
-
-          {currentView === 'intelligence' && <SecurityIntelligence advisories={advisories} />}
 
           {currentView === 'alert-center' && (
             <AlertCenter alerts={alerts} onNavigate={setCurrentView} />
@@ -126,13 +127,29 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentView === 'audit-logs' && <AuditLogs logs={auditLogs} />}
+          {currentView === 'crowd-analytics' && <CrowdAnalytics events={events} />}
+
+          {currentView === 'intelligence' && <SecurityIntelligence advisories={advisories} />}
+
+          {currentView === 'cameras' && <CameraManagement cameras={cameras} />}
+
+          {currentView === 'video-monitor' && <LiveVideoMonitoring cameras={cameras} />}
 
           {currentView === 'edge-devices' && <EdgeDeviceManagement devices={edgeDevices} />}
+
+          {currentView === 'audit-logs' && <AuditLogs logs={auditLogs} />}
 
           {currentView === 'settings' && <SystemSettings health={health} />}
         </main>
       </div>
+
+      {/* Synthetic Demo Controller Modal */}
+      <DemoControllerModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onEventGenerated={loadData}
+        cameras={cameras}
+      />
     </div>
   );
 };

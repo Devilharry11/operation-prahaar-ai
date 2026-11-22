@@ -10,17 +10,21 @@ import {
   SecurityAdvisory,
   HumanReview,
   AuditLog,
+  DemoEventResponse,
+  DemoResetResponse,
+  DemoHistoryItem,
 } from '../types';
 
 const API_BASE = 'http://127.0.0.1:8000/api/v1';
 
-// Helper for safe fetch with mock fallback
+// Helper for safe fetch with mock fallback (Read-only operations)
 async function fetchWithFallback<T>(url: string, mockFallback: T, options?: RequestInit): Promise<T> {
   try {
     const res = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        'X-Operator-Badge': 'IND-OPR-4081',
         ...options?.headers,
       },
     });
@@ -32,6 +36,29 @@ async function fetchWithFallback<T>(url: string, mockFallback: T, options?: Requ
     console.warn(`[Prahaar API] Using resilient local fallback for ${url}:`, err);
     return mockFallback;
   }
+}
+
+// Helper for mutation requests: strictly throws on error; NEVER fakes success
+async function fetchMutation<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${url}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Operator-Badge': 'IND-OPR-4081',
+      ...options?.headers,
+    },
+  });
+  if (!res.ok) {
+    let errorDetail = `Server responded with status ${res.status}`;
+    try {
+      const errorJson = await res.json();
+      errorDetail = errorJson.detail || errorJson.message || errorDetail;
+    } catch {
+      // fallback to status text
+    }
+    throw new Error(errorDetail);
+  }
+  return await res.json();
 }
 
 export const PrahaarAPI = {
@@ -244,5 +271,62 @@ export const PrahaarAPI = {
         created_at: new Date(Date.now() - 900000).toISOString(),
       },
     ]);
+  },
+
+  // 10. Phase B: Synthetic Demo Controller (Strict mutation error propagation)
+  async generateDemoEvent(
+    payload: {
+      scenario: string;
+      camera_id?: string;
+      severity?: string;
+      custom_note?: string;
+    },
+    operatorBadge: string = 'IND-OPR-4081'
+  ): Promise<DemoEventResponse> {
+    return fetchMutation<DemoEventResponse>('/demo/generate', {
+      method: 'POST',
+      headers: {
+        'X-Operator-Badge': operatorBadge,
+      },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async generateDemoBatch(
+    payload: { count: number; camera_id?: string },
+    operatorBadge: string = 'IND-OPR-4081'
+  ): Promise<DemoEventResponse[]> {
+    return fetchMutation<DemoEventResponse[]>('/demo/generate-batch', {
+      method: 'POST',
+      headers: {
+        'X-Operator-Badge': operatorBadge,
+      },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getDemoHistory(limit: number = 20, operatorBadge: string = 'IND-OPR-4081'): Promise<DemoHistoryItem[]> {
+    return fetchWithFallback<DemoHistoryItem[]>(
+      `/demo/history?limit=${limit}`,
+      [],
+      {
+        headers: {
+          'X-Operator-Badge': operatorBadge,
+        },
+      }
+    );
+  },
+
+  async resetDemoData(
+    payload: { confirm: boolean; operator_badge?: string },
+    operatorBadge: string = 'IND-OPR-4081'
+  ): Promise<DemoResetResponse> {
+    return fetchMutation<DemoResetResponse>('/demo/reset', {
+      method: 'POST',
+      headers: {
+        'X-Operator-Badge': operatorBadge,
+      },
+      body: JSON.stringify(payload),
+    });
   },
 };

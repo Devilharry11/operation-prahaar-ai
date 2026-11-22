@@ -38,6 +38,8 @@ htmlcov/
 
 # Database files
 *.db
+*.bak
+backups/
 *.sqlite
 *.sqlite3
 prahaar.db
@@ -47,6 +49,7 @@ prahaar_test.db
 *.jpg
 *.jpeg
 *.png
+!docs/screenshots/*.png
 *.mp4
 *.avi
 *.mkv

@@ -1,7 +1,8 @@
-// Operation Prahaar AI - 8. Alert Center View
+// Operation Prahaar AI - Alert Center (Enterprise SOC Redesign)
 import React, { useState } from 'react';
-import { Bell, AlertTriangle, CheckCircle, XCircle, UserCheck } from 'lucide-react';
+import { Bell, ArrowRight } from 'lucide-react';
 import { Alert } from '../types';
+import { SectionHeader, StatusBadge } from '../components/Common';
 
 interface AlertCenterProps {
   alerts: Alert[];
@@ -17,63 +18,45 @@ export const AlertCenter: React.FC<AlertCenterProps> = ({ alerts, onNavigate }) 
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Bell className="w-5 h-5 text-emerald-400" />
-            <span>Alert Center</span>
-          </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Real-time simulated alerts. Every alert remains UNVERIFIED until an authorized operator reviews it.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <SectionHeader
+        title="Operational Alert Center"
+        subtitle="Simulated public safety alerts. Alerts strictly remain UNVERIFIED until reviewed by authorized human officers."
+        icon={Bell}
+        actions={
+          <div className="flex items-center space-x-1.5 bg-[#151D25] p-1 rounded-md border border-[#2A3540]">
+            {['ALL', 'UNVERIFIED', 'VERIFIED', 'REJECTED', 'ESCALATED'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-3 py-1 text-xs font-mono rounded transition-all ${
+                  filter === tab
+                    ? 'bg-[#1B2630] text-emerald-400 font-semibold border border-emerald-800/60 shadow-sm'
+                    : 'text-[#94A3B8] hover:text-white'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-        {/* Filter Buttons */}
-        <div className="flex items-center space-x-2 bg-[#111713] p-1 rounded-md border border-[#27382B]">
-          {['ALL', 'UNVERIFIED', 'VERIFIED', 'REJECTED', 'ESCALATED'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-3 py-1 text-xs font-mono rounded ${
-                filter === tab
-                  ? 'bg-[#1C2C20] text-emerald-400 border border-[#2F4835]'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Alerts Grid */}
       <div className="space-y-3">
         {filteredAlerts.map((alert) => (
           <div
             key={alert.id}
-            className="bg-[#111713] border border-[#27382B] rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#2F4835] transition-all"
+            className="bg-[#151D25] border border-[#2A3540] rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-500 transition-all shadow-sm"
           >
             <div className="space-y-1">
               <div className="flex items-center space-x-2 text-xs font-mono">
                 <span className="font-bold text-amber-400">{alert.alert_code}</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    alert.review_status === 'UNVERIFIED'
-                      ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                      : alert.review_status === 'VERIFIED'
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                      : 'bg-gray-800 text-gray-300 border border-gray-700'
-                  }`}
-                >
-                  {alert.review_status}
-                </span>
-                <span className="text-gray-400">• Severity: {alert.severity}</span>
+                <StatusBadge status={alert.review_status} />
+                <span className="text-[#94A3B8]">• Severity: {alert.severity}</span>
               </div>
-              <h4 className="text-sm font-semibold text-white">{alert.title}</h4>
-              <p className="text-xs text-gray-300">{alert.summary}</p>
-              <div className="text-[11px] font-mono text-gray-400">
+              <h4 className="text-sm font-semibold text-white tracking-tight">{alert.title}</h4>
+              <p className="text-xs text-slate-300 leading-relaxed">{alert.summary}</p>
+              <div className="text-[11px] font-mono text-[#94A3B8]">
                 Timestamp: {new Date(alert.created_at).toLocaleString()}
               </div>
             </div>
@@ -82,13 +65,14 @@ export const AlertCenter: React.FC<AlertCenterProps> = ({ alerts, onNavigate }) 
               {alert.review_status === 'UNVERIFIED' ? (
                 <button
                   onClick={() => onNavigate('human-verification')}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold font-mono uppercase tracking-wider rounded transition-all shadow"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold font-sans rounded flex items-center space-x-1.5 transition-all shadow"
                 >
-                  Review Incident &rarr;
+                  <span>Review Incident</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <span className="px-3 py-1.5 text-xs font-mono text-emerald-400 bg-[#16221A] rounded border border-[#2F4835]">
-                  Reviewed by Human
+                <span className="px-3 py-1 text-xs font-mono text-emerald-400 bg-[#10161C] rounded border border-[#2A3540]">
+                  Human Reviewed
                 </span>
               )}
             </div>
