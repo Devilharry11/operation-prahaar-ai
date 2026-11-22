@@ -325,8 +325,11 @@ class AuditLog(Base):
     actor_id = Column(String(60), default="SYSTEM", nullable=False, index=True)
     ip_address = Column(String(45), default="127.0.0.1", nullable=False)
     action_summary = Column(String(255), nullable=False)
+    record_reference = Column(String(100), nullable=True, index=True)
     before_state_json = Column(Text, nullable=True)
     after_state_json = Column(Text, nullable=True)
+    previous_hash = Column(String(64), nullable=True)
+    current_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
 
     __table_args__ = (

@@ -14,6 +14,7 @@ import uuid
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from backend.app.models.entities import Incident, Alert, HumanReview, Approval, AuditLog, User, Role
+from backend.app.services.audit_chain import AuditChainService
 from backend.app.schemas.governance import (
     Tier1ReviewRequest,
     Tier2ReviewRequest,
@@ -92,16 +93,17 @@ class GovernanceService:
         )
         db.add(review)
 
-        # Audit Log
-        audit = AuditLog(
+        # Audit Log (Cryptographically Chained)
+        audit = AuditChainService.append_audit_log(
+            db=db,
             event_type="HUMAN_VERIFICATION",
             actor_id=current_user.badge_number,
             action_summary=f"Tier-1 Operator ({current_user.badge_number}) marked Incident {incident.incident_code} as {action_upper}.",
+            record_reference=incident.incident_code,
             before_state_json=json.dumps({"status": prior_status}),
             after_state_json=json.dumps({"status": new_inc_status, "rationale": payload.rationale, "tier": 1}),
             created_at=now,
         )
-        db.add(audit)
         db.commit()
 
         return GovernanceReviewResponse(
@@ -178,15 +180,16 @@ class GovernanceService:
         )
         db.add(approval)
 
-        audit = AuditLog(
+        audit = AuditChainService.append_audit_log(
+            db=db,
             event_type="WATCH_OFFICER_CONFIRMATION",
             actor_id=current_user.badge_number,
             action_summary=f"Tier-2 Watch Officer ({current_user.badge_number}) marked Incident {incident.incident_code} as {action_upper}.",
+            record_reference=incident.incident_code,
             before_state_json=json.dumps({"status": prior_status}),
             after_state_json=json.dumps({"status": new_inc_status, "explanation": payload.explanation, "tier": 2}),
             created_at=now,
         )
-        db.add(audit)
         db.commit()
 
         return GovernanceReviewResponse(
@@ -259,15 +262,16 @@ class GovernanceService:
         )
         db.add(approval)
 
-        audit = AuditLog(
+        audit = AuditChainService.append_audit_log(
+            db=db,
             event_type="EXECUTIVE_ADVISORY_SIGN_OFF",
             actor_id=current_user.badge_number,
             action_summary=f"Tier-3 Chief Controller ({current_user.badge_number}) {action_upper} public safety advisory release for {incident.incident_code}.",
+            record_reference=incident.incident_code,
             before_state_json=json.dumps({"status": prior_status}),
             after_state_json=json.dumps({"status": new_inc_status, "comments": payload.controller_comments, "tier": 3}),
             created_at=now,
         )
-        db.add(audit)
         db.commit()
 
         return GovernanceReviewResponse(

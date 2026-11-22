@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.core.datetime_util import utc_now
 from backend.app.models.entities import HumanReview, Alert, Incident, User, AuditLog
+from backend.app.services.audit_chain import AuditChainService
 from backend.app.schemas.review import HumanReviewCreate, HumanReviewRead
 from backend.app.models.enums import ReviewStatus, IncidentStatus, AuditAction
 
@@ -76,15 +77,16 @@ def submit_human_review(payload: HumanReviewCreate, db: Session = Depends(get_db
     )
     db.add(review)
 
-    # 6. Append to Tamper-Evident Audit Log
-    audit = AuditLog(
+    # 6. Append to Tamper-Evident Cryptographically Chained Audit Log
+    audit = AuditChainService.append_audit_log(
+        db=db,
         event_type=AuditAction.HUMAN_VERIFICATION.value,
         actor_id=reviewer.badge_number,
         action_summary=f"Human Reviewer {reviewer.full_name} ({reviewer.badge_number}) marked Incident {incident.incident_code} as {action_upper}. Rationale: {payload.rationale}",
+        record_reference=incident.incident_code,
         before_state_json=json.dumps({"status": prior_status}),
         after_state_json=json.dumps({"status": new_incident_status, "rationale": payload.rationale}),
     )
-    db.add(audit)
 
     db.commit()
     db.refresh(review)
