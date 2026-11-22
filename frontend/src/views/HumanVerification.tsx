@@ -145,6 +145,9 @@ export const HumanVerification: React.FC<HumanVerificationProps> = ({
         icon={UserCheck}
         actions={
           <div className="flex items-center space-x-2 font-mono text-[11px]">
+            <span className="bg-blue-950/60 text-blue-300 border border-blue-800 px-2 py-0.5 rounded font-bold">
+              [SYNTHETIC DEMO]
+            </span>
             <span className="text-[#94A3B8]">Active Operator:</span>
             <span className="bg-[#151D25] text-emerald-300 border border-[#2A3540] px-2 py-0.5 rounded font-bold">
               {activeBadge}

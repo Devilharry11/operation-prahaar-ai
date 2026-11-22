@@ -183,12 +183,24 @@ Follow these 5 interactive demonstration steps during evaluation:
 - In the sidebar, navigate to **Audit Ledger**.
 - Click **⚡ VERIFY CRYPTOGRAPHIC CHAIN**.
 - Watch the platform traverse all blocks from the 64-zero genesis anchor to the chain head.
-- Observe the green seal: **`CRYPTOGRAPHIC CHAIN VERIFIED — 100% AUTHENTIC & UNTAMPERED`**.
+- Observe the green seal: **`CRYPTOGRAPHIC CHAIN INTEGRITY VERIFIED — SEQUENTIALLY LINKED TO GENESIS ANCHOR`**.
 - Review the ledger table showing the sequential SHA-256 current and previous block hashes for every human decision!
 
 ---
 
-## 7. Automated Test Suite Summary
+## 7. Key Documentation & Hackathon Artifacts
+
+For comprehensive evaluation, review the following documents:
+- [System Architecture](file:///docs/FINAL_PROJECT_ARCHITECTURE.md): Complete end-to-end technical specification.
+- [Hackathon Demo Guide](file:///docs/HACKATHON_DEMO_GUIDE.md): 5-minute evaluator and judge script.
+- [Security & Responsible AI Review](file:///docs/FINAL_SECURITY_REVIEW.md): In-depth security, RBAC authorization, and ethical guardrail analysis.
+- [Final Test Report](file:///docs/FINAL_TEST_REPORT.md): 56/56 unit, integration, and browser verification test matrix.
+- [Known Limitations & Roadmap](file:///docs/KNOWN_LIMITATIONS.md): Transparent operational boundaries and hardware transition roadmap.
+- [Edge UI Screenshots](file:///docs/final_screenshots/): High-resolution captures of the 6 core operational views.
+
+---
+
+## 8. Automated Test Suite Summary
 
 ```
 ======================================================================
@@ -206,6 +218,6 @@ Ran 56 tests in 1.892s — OK (0 failures, 0 errors)
 
 ---
 
-## 8. License & Acknowledgments
+## 9. License & Acknowledgments
 
 Developed as an independent student prototype for public safety innovation and responsible AI education. Dedicated to national public safety personnel and first responders who protect crowded public venues every day.

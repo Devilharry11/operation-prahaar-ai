@@ -40,6 +40,7 @@ htmlcov/
 *.db
 *.bak
 backups/
+scratch/
 *.sqlite
 *.sqlite3
 prahaar.db
@@ -50,6 +51,7 @@ prahaar_test.db
 *.jpeg
 *.png
 !docs/screenshots/*.png
+!docs/final_screenshots/*.png
 *.mp4
 *.avi
 *.mkv

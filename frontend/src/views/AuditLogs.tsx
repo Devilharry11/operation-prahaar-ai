@@ -46,6 +46,9 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
         icon={History}
         actions={
           <div className="flex items-center space-x-3">
+            <span className="text-[11px] font-mono bg-blue-950/60 text-blue-300 border border-blue-800 px-2 py-1 rounded">
+              [SYNTHETIC DEMO]
+            </span>
             <button
               onClick={handleVerifyChain}
               disabled={isVerifying}
@@ -86,7 +89,7 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
               )}
               <span className="font-bold text-sm">
                 {verificationResult.is_valid
-                  ? 'CRYPTOGRAPHIC CHAIN VERIFIED — 100% AUTHENTIC & UNTAMPERED'
+                  ? 'CRYPTOGRAPHIC CHAIN INTEGRITY VERIFIED — SEQUENTIALLY LINKED TO GENESIS ANCHOR'
                   : 'INTEGRITY BREACH DETECTED — CORRUPTED OR TAMPERED RECORDS'}
               </span>
             </div>
@@ -96,6 +99,9 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
           </div>
 
           <p className="mt-2 text-xs font-sans text-slate-300">{verificationResult.message}</p>
+          <div className="text-[11px] text-[#94A3B8] font-sans mt-1.5 italic bg-[#10161C] p-2 rounded border border-[#2A3540]">
+            Audit Integrity Scope: SHA-256 hash chaining detects record content modification, reordering, and intermediate block deletion. It does not independently prevent offline rewriting of the entire database file without external write-once storage.
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-[#2A3540] text-[11px]">
             <div>

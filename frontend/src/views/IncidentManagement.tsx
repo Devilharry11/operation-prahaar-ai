@@ -37,6 +37,11 @@ export const IncidentManagement: React.FC<IncidentManagementProps> = ({ incident
         title="Incident Management & Explainable AI (XAI) Dossier"
         subtitle="Correlated situational assessments synthesizing multi-camera spatial events, agency advisories, and reproducible XAI factor breakdowns."
         icon={FolderKanban}
+        actions={
+          <span className="text-[11px] font-mono bg-blue-950/60 text-blue-300 border border-blue-800 px-2 py-1 rounded">
+            [SYNTHETIC DEMO]
+          </span>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -49,11 +54,10 @@ export const IncidentManagement: React.FC<IncidentManagementProps> = ({ incident
             <div
               key={inc.id}
               onClick={() => setSelectedIncident(inc)}
-              className={`p-3 rounded-md cursor-pointer border transition-all ${
-                selectedIncident?.id === inc.id
-                  ? 'bg-[#1B2630] border-emerald-500 text-white shadow-sm'
-                  : 'bg-[#10161C] border-[#2A3540] text-slate-300 hover:bg-[#151D25]'
-              }`}
+              className={`p-3 rounded-md cursor-pointer border transition-all ${selectedIncident?.id === inc.id
+                ? 'bg-[#1B2630] border-emerald-500 text-white shadow-sm'
+                : 'bg-[#10161C] border-[#2A3540] text-slate-300 hover:bg-[#151D25]'
+                }`}
             >
               <div className="flex items-center justify-between text-xs mb-1 font-mono">
                 <span className="font-bold text-emerald-400">{inc.incident_code}</span>

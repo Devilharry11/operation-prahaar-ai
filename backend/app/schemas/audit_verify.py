@@ -22,7 +22,7 @@ class TamperedAuditEntry(BaseModel):
 
 class AuditVerificationResponse(BaseModel):
     """Complete cryptographic integrity status of the audit log ledger."""
-    is_valid: bool = Field(..., description="True if 100% of the chain is cryptographically intact and authentic")
+    is_valid: bool = Field(..., description="True if cryptographic hash chain is sequentially linked and consistent with genesis anchor")
     total_records_checked: int = Field(..., description="Total count of audit log entries inspected in chain")
     tampered_count: int = Field(0, description="Count of corrupted, tampered, or broken-link entries detected")
     tampered_records: List[TamperedAuditEntry] = Field(default_factory=list, description="List of detected anomalies")

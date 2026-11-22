@@ -275,8 +275,8 @@ class AuditChainService:
 
         if is_valid:
             message = (
-                f"Cryptographic verification SUCCESS: All {total_count} audit records are authentic, "
-                f"unmodified, and sequentially linked to genesis anchor."
+                f"Cryptographic verification SUCCESS: All {total_count} audit records match sequential "
+                f"SHA-256 hash digests anchored to genesis block. (Chain integrity verified)."
             )
         else:
             message = (
