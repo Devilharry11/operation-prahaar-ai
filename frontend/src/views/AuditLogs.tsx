@@ -72,7 +72,7 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
       />
 
       {/* Cryptographic Verification Status Banner */}
-      {verificationResult && (
+      {verificationResult ? (
         <div
           className={`p-4 rounded-lg border text-xs font-mono transition-all ${
             verificationResult.is_valid
@@ -89,8 +89,8 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
               )}
               <span className="font-bold text-sm">
                 {verificationResult.is_valid
-                  ? 'CRYPTOGRAPHIC CHAIN INTEGRITY VERIFIED — SEQUENTIALLY LINKED TO GENESIS ANCHOR'
-                  : 'INTEGRITY BREACH DETECTED — CORRUPTED OR TAMPERED RECORDS'}
+                  ? 'SUCCESS: CRYPTOGRAPHIC CHAIN INTEGRITY VERIFIED — SEQUENTIALLY LINKED TO GENESIS ANCHOR'
+                  : 'FAILURE: INTEGRITY BREACH DETECTED — CORRUPTED OR TAMPERED RECORDS'}
               </span>
             </div>
             <span className="text-[11px] text-[#94A3B8]">
@@ -122,7 +122,17 @@ export const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
             </div>
           </div>
         </div>
-      )}
+      ) : verifyMessage ? (
+        <div className="p-4 rounded-lg border bg-red-950/60 border-red-500 text-red-200 text-xs font-mono transition-all">
+          <div className="flex items-center space-x-2">
+            <ShieldAlert className="w-5 h-5 text-red-400" />
+            <span className="font-bold text-sm">
+              FAILURE: CRYPTOGRAPHIC CHAIN VERIFICATION FAILED
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-sans text-slate-300">{verifyMessage}</p>
+        </div>
+      ) : null}
 
       {/* Ledger Table */}
       <div className="bg-[#151D25] border border-[#2A3540] rounded-lg overflow-hidden shadow-sm">

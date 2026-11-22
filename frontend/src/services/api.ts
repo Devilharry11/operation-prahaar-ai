@@ -306,6 +306,21 @@ export const PrahaarAPI = {
     });
   },
 
+  async generateSyntheticIncident(zoneId?: string, severity?: string): Promise<any> {
+    const badge = getActiveBadge();
+    return fetchMutation('/analytics/generate-incident', {
+      method: 'POST',
+      headers: {
+        'X-Operator-Badge': badge,
+      },
+      body: JSON.stringify({
+        zone_id: zoneId,
+        severity: severity || 'HIGH',
+        custom_note: 'Manual Educational Demonstration Incident',
+      }),
+    });
+  },
+
   // ==========================================
   // Phase C: Milestone C.2 — Explainable AI (XAI)
   // ==========================================

@@ -1,19 +1,22 @@
 // Operation Prahaar AI - Crowd Dynamics & Spatial Analytics (Phase C Milestone C.1)
 import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Gauge, MapPin, RefreshCw } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Gauge, MapPin, RefreshCw, Sparkles, CheckCircle } from 'lucide-react';
 import { CameraEvent, AnalyticsSummary, TrendPoint, HotspotItem } from '../types';
 import { PrahaarAPI } from '../services/api';
 import { SectionHeader, MetricCard, StatusBadge } from '../components/Common';
 
 interface CrowdAnalyticsProps {
   events: CameraEvent[];
+  onIncidentGenerated?: () => void;
 }
 
-export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
+export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events, onIncidentGenerated }) => {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -28,6 +31,30 @@ export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
       console.error('Failed to load analytics data', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateIncident = async () => {
+    setIsGenerating(true);
+    setActionFeedback(null);
+    try {
+      const targetZone = selectedZone === 'ALL' ? undefined : selectedZone;
+      const res = await PrahaarAPI.generateSyntheticIncident(targetZone, 'HIGH');
+      setActionFeedback({
+        type: 'success',
+        message: `[SYNTHETIC DEMO] Incident ${res.incident_code} & Alert ${res.alert_code} generated for ${res.zone_name} (${Math.round(res.occupancy_pct)}% occupancy). Status: ${res.review_status}. Added to Events Ledger and HITL Review Queue.`,
+      });
+      await loadData();
+      if (onIncidentGenerated) {
+        onIncidentGenerated();
+      }
+    } catch (err: any) {
+      setActionFeedback({
+        type: 'error',
+        message: err.message || 'Failed to generate synthetic demonstration incident.',
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -54,6 +81,15 @@ export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
               [SYNTHETIC DEMO TELEMETRY]
             </span>
             <button
+              onClick={handleGenerateIncident}
+              disabled={isGenerating}
+              className="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded font-mono text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+              title="Trigger a synthetic threshold breach and generate a demonstration incident"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+              <span>{isGenerating ? 'GENERATING...' : '⚡ GENERATE SYNTHETIC INCIDENT'}</span>
+            </button>
+            <button
               onClick={loadData}
               disabled={isLoading}
               className="p-1.5 bg-[#151D25] hover:bg-[#1B2630] border border-[#2A3540] rounded text-slate-300 hover:text-white"
@@ -64,6 +100,32 @@ export const CrowdAnalytics: React.FC<CrowdAnalyticsProps> = ({ events }) => {
           </div>
         }
       />
+
+      {/* Operational Action Feedback Banner */}
+      {actionFeedback && (
+        <div
+          className={`p-3 rounded-lg border text-xs font-mono flex items-center justify-between ${
+            actionFeedback.type === 'success'
+              ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
+              : 'bg-red-950/70 border-red-500/80 text-red-200'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {actionFeedback.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            )}
+            <span>{actionFeedback.message}</span>
+          </div>
+          <button
+            onClick={() => setActionFeedback(null)}
+            className="text-slate-400 hover:text-white text-xs font-mono px-2 py-0.5"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* 3 Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

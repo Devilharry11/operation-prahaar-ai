@@ -126,14 +126,20 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentView === 'safety-events' && <SafetyEvents events={events} />}
+          {currentView === 'safety-events' && (
+            <SafetyEvents events={events} onIncidentGenerated={loadData} />
+          )}
 
           {currentView === 'incidents' && (
             <IncidentManagement incidents={incidents} onNavigate={setCurrentView} />
           )}
 
           {currentView === 'alert-center' && (
-            <AlertCenter alerts={alerts} onNavigate={setCurrentView} />
+            <AlertCenter
+              alerts={alerts}
+              onNavigate={setCurrentView}
+              onIncidentGenerated={loadData}
+            />
           )}
 
           {currentView === 'human-verification' && (
@@ -144,7 +150,9 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentView === 'crowd-analytics' && <CrowdAnalytics events={events} />}
+          {currentView === 'crowd-analytics' && (
+            <CrowdAnalytics events={events} onIncidentGenerated={loadData} />
+          )}
 
           {currentView === 'intelligence' && <SecurityIntelligence advisories={advisories} />}
 

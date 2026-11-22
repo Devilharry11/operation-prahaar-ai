@@ -4,18 +4,68 @@ Serves aggregate spatial crowd telemetry and bottleneck indicators.
 Strictly non-identifying; zero facial recognition; zero person tracking.
 """
 
-from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.services.analytics import AnalyticsService
+from backend.app.core.auth import get_current_operator
+from backend.app.models.entities import User
+from backend.app.services.analytics import AnalyticsService, FICTIONAL_ZONES
 from backend.app.schemas.analytics import (
+    ZoneMetrics,
     AnalyticsTrendsResponse,
     AnalyticsHotspotsResponse,
     AnalyticsSummaryResponse,
+    SyntheticIncidentRequest,
+    SyntheticIncidentResponse,
 )
 
 router = APIRouter(prefix="/analytics", tags=["Aggregate Spatial Analytics"])
+
+
+@router.get("/zones", response_model=List[ZoneMetrics])
+def get_monitored_zones(db: Session = Depends(get_db)):
+    """Retrieve real-time synthetic metrics across all monitored transit zones."""
+    zones = []
+    for z_key in FICTIONAL_ZONES:
+        zm = AnalyticsService.get_zone_metrics(db, z_key)
+        if zm:
+            zones.append(zm)
+    return zones
+
+
+@router.post("/generate-incident", response_model=SyntheticIncidentResponse, status_code=status.HTTP_201_CREATED)
+def generate_synthetic_incident(
+    payload: Optional[SyntheticIncidentRequest] = None,
+    current_user: User = Depends(get_current_operator),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually triggers a synthetic threshold-exceeded incident for educational demonstration.
+    Saves event, incident (status: NEW), and alert (status: UNVERIFIED) to SQLite,
+    and commits a new block to the cryptographic audit ledger.
+    """
+    zone_id = payload.zone_id if payload else None
+    severity = payload.severity if (payload and payload.severity) else "HIGH"
+    custom_note = payload.custom_note if payload else None
+    badge = current_user.badge_number if current_user else "DEMO_OPERATOR"
+
+    force = payload.force if (payload and payload.force is not None) else True
+
+    res = AnalyticsService.trigger_synthetic_incident(
+        db=db,
+        zone_id=zone_id,
+        severity=severity,
+        custom_note=custom_note,
+        operator_badge=badge,
+        force=force,
+    )
+    if not res:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to generate synthetic incident. Verify cameras and locations are seeded."
+        )
+    return res
 
 
 @router.get("/trends", response_model=AnalyticsTrendsResponse)

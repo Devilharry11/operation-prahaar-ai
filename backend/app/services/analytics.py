@@ -8,8 +8,13 @@ Strictly non-identifying; zero facial recognition; zero person tracking.
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timezone, timedelta
 import math
+import uuid
+import json
 from sqlalchemy.orm import Session
-from backend.app.models.entities import CameraEvent, Incident, Alert, Camera
+from backend.app.models.entities import CameraEvent, Incident, Alert, Camera, Evidence, AuditLog
+from backend.app.models.enums import SeverityLevel, ReviewStatus, IncidentStatus, UncertaintyLevel, EvidenceType
+from backend.app.services.audit_chain import AuditChainService
+from backend.app.core.datetime_util import utc_now
 from backend.app.schemas.analytics import (
     ZoneMetrics,
     TrendPoint,
@@ -17,6 +22,7 @@ from backend.app.schemas.analytics import (
     HotspotItem,
     AnalyticsHotspotsResponse,
     AnalyticsSummaryResponse,
+    SyntheticIncidentResponse,
 )
 
 # -----------------------------------------------------------------------------
@@ -125,17 +131,23 @@ class AnalyticsService:
         congestion_level, trend = _classify_congestion(occupancy_pct)
         flow_rate = round(max(5.0, (1.0 - density_ratio) * 45.0 + (wave * 8.0)), 1)
         velocity_index = round(max(0.15, min(0.95, 1.0 - (density_ratio * 0.7))), 2)
+        flow_velocity = round(velocity_index * 1.5, 2)
 
         return ZoneMetrics(
             zone_id=zone_id,
             zone_name=zone_def["name"],
             capacity=capacity,
+            capacity_limit=capacity,
             current_occupancy=current_occupancy,
+            occupancy_ratio=round(density_ratio, 2),
             occupancy_pct=occupancy_pct,
+            flow_velocity_mps=flow_velocity,
             flow_rate_per_min=flow_rate,
             velocity_index=velocity_index,
             congestion_level=congestion_level,
+            density_trend=trend,
             trend=trend,
+            uncertainty_score=0.12,
             is_synthetic=True,
         )
 
@@ -278,19 +290,219 @@ class AnalyticsService:
         )
 
     @staticmethod
+    def trigger_synthetic_incident(
+        db: Session,
+        zone_id: Optional[str] = None,
+        severity: str = "HIGH",
+        custom_note: Optional[str] = None,
+        operator_badge: str = "DEMO_CONTROLLER",
+        force: bool = True,
+    ) -> Optional[SyntheticIncidentResponse]:
+        """
+        Generates or evaluates a synthetic threshold-exceeded incident and alert.
+        Connects spatial aggregate analytics directly to the incident, alert,
+        event, and cryptographic audit ledger pipeline.
+        Strictly non-identifying; zero facial recognition; mandatory UNVERIFIED initial status.
+        """
+        target_zone = zone_id if (zone_id and zone_id in FICTIONAL_ZONES) else "ZONE-A"
+        zone_def = FICTIONAL_ZONES[target_zone]
+
+        zm = AnalyticsService.get_zone_metrics(db, target_zone)
+        if not zm:
+            return None
+
+        cam_code = zone_def["camera_code"]
+        camera = db.query(Camera).filter(Camera.camera_code == cam_code).first()
+        if not camera:
+            camera = db.query(Camera).first()
+        if not camera:
+            return None
+
+        now = utc_now()
+
+        # Deduplication check: prevent duplicate alerts for the same unchanged condition
+        if not force:
+            fifteen_mins_ago = now - timedelta(minutes=15)
+            existing_active = (
+                db.query(Alert)
+                .join(Incident, Alert.incident_id == Incident.id)
+                .filter(
+                    Alert.camera_id == camera.id,
+                    Alert.review_status.in_(["UNVERIFIED", "NEW"]),
+                    Alert.created_at >= fifteen_mins_ago,
+                )
+                .first()
+            )
+            if existing_active:
+                inc = existing_active.incident
+                return SyntheticIncidentResponse(
+                    success=True,
+                    message=f"Deduplicated: An active {existing_active.review_status} alert already exists for {target_zone} within the 15-minute window.",
+                    zone_id=target_zone,
+                    zone_name=zm.zone_name,
+                    occupancy_pct=zm.occupancy_pct,
+                    event_id=existing_active.id,
+                    incident_id=inc.id if inc else "N/A",
+                    incident_code=inc.incident_code if inc else "N/A",
+                    alert_id=existing_active.id,
+                    alert_code=existing_active.alert_code,
+                    review_status=existing_active.review_status,
+                    severity=existing_active.severity,
+                    deduplicated=True,
+                    is_synthetic=True,
+                    timestamp=existing_active.created_at.isoformat(),
+                )
+
+        timestamp_suffix = now.strftime("%H%M%S")
+        unique_suffix = str(uuid.uuid4())[:4].upper()
+        inc_code = f"DEMO-INC-{timestamp_suffix}-{unique_suffix}"
+        alt_code = f"DEMO-ALT-{timestamp_suffix}-{unique_suffix}"
+
+        # 1. Create CameraEvent
+        event = CameraEvent(
+            camera_id=camera.id,
+            edge_device_id=camera.edge_device_id,
+            event_type="HIGH_CROWD_CONGESTION",
+            severity=severity or SeverityLevel.HIGH.value,
+            crowd_density_score=zm.occupancy_ratio,
+            motion_energy=zm.flow_rate_per_min,
+            bounding_boxes_json=json.dumps([
+                {"x": 100, "y": 120, "w": 50, "h": 80},
+                {"x": 220, "y": 130, "w": 45, "h": 75}
+            ]),
+            metadata_json=json.dumps({
+                "is_synthetic_demo": True,
+                "zone_id": target_zone,
+                "zone_name": zm.zone_name,
+                "occupancy_pct": zm.occupancy_pct,
+                "threshold": 75.0,
+                "custom_note": custom_note or "Synthetic Demonstration Alert",
+                "generated_at": now.isoformat(),
+            }),
+            timestamp=now,
+        )
+        db.add(event)
+        db.flush()
+
+        # 2. Create Incident (Status: NEW -> Appears in Tier 1 Governance Queue!)
+        incident = Incident(
+            incident_code=inc_code,
+            title=f"[SYNTHETIC DEMO] Zone {target_zone} Density Surge ({int(zm.occupancy_pct)}%)",
+            description=(
+                f"Synthetic Demonstration Event: Aggregate spatial crowd density reached {int(zm.occupancy_pct)}%, "
+                f"exceeding the configured 75% public safety threshold in {zm.zone_name}."
+            ),
+            status=IncidentStatus.NEW.value,
+            priority=severity or SeverityLevel.HIGH.value,
+            confidence_score=0.92,
+            uncertainty_level=UncertaintyLevel.LOW.value,
+            explanation=(
+                f"Spatial occupancy ratio {zm.occupancy_ratio:.2f} exceeded safety baseline 0.75 across {zm.zone_name}. "
+                f"Optical flow velocity decelerated to {zm.flow_velocity_mps:.2f} m/s indicating corridor bottleneck."
+            ),
+            triggered_rule="DEMO_OCCUPANCY_THRESHOLD_RULE",
+            location_id=camera.location_id,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(incident)
+        db.flush()
+
+        # 3. Create Alert (Status: strictly UNVERIFIED per Responsible AI rules)
+        alert = Alert(
+            alert_code=alt_code,
+            incident_id=incident.id,
+            camera_id=camera.id,
+            alert_type="SYNTHETIC_DEMO_ALERT",
+            severity=severity or SeverityLevel.HIGH.value,
+            title=f"[DEMO] High Crowd Density Warning - {zm.zone_name}",
+            summary=(
+                f"Synthetic Event: Estimated occupancy reached {int(zm.occupancy_pct)}% at {zm.zone_name}. "
+                f"Awaiting mandatory human operator verification before escalation."
+            ),
+            review_status=ReviewStatus.UNVERIFIED.value,
+            is_actionable=True,
+            created_at=now,
+        )
+        db.add(alert)
+        db.flush()
+
+        # 4. Create Evidence
+        evidence = Evidence(
+            incident_id=incident.id,
+            camera_event_id=event.id,
+            evidence_type=EvidenceType.TELEMETRY_LOG.value,
+            data_payload_json=json.dumps({
+                "synthetic_demo": True,
+                "zone_id": target_zone,
+                "density": zm.occupancy_ratio,
+                "flow_velocity_mps": zm.flow_velocity_mps,
+                "threshold": 75.0,
+            }),
+            hash_signature=str(uuid.uuid4()).replace("-", "")[:64],
+            created_at=now,
+        )
+        db.add(evidence)
+
+        # 5. Append to Cryptographic Audit Ledger (SHA-256 block chain linkage)
+        AuditChainService.append_audit_log(
+            db=db,
+            event_type="DEMO_ALERT_GENERATED",
+            actor_id=operator_badge,
+            action_summary=(
+                f"Synthetic Threshold Alert Generated by {operator_badge}: Zone {target_zone} ({int(zm.occupancy_pct)}% >= 75%) "
+                f"-> Incident {inc_code} / Alert {alt_code} (UNVERIFIED)"
+            ),
+            record_reference=alt_code,
+            after_state_json=json.dumps({
+                "zone_id": target_zone,
+                "incident_code": inc_code,
+                "alert_code": alt_code,
+                "review_status": "UNVERIFIED",
+                "density": zm.occupancy_ratio,
+            }),
+            created_at=now,
+        )
+
+        db.commit()
+
+        return SyntheticIncidentResponse(
+            success=True,
+            message=f"Successfully generated synthetic incident for {zm.zone_name} ({int(zm.occupancy_pct)}% occupancy).",
+            zone_id=target_zone,
+            zone_name=zm.zone_name,
+            occupancy_pct=zm.occupancy_pct,
+            event_id=event.id,
+            incident_id=incident.id,
+            incident_code=inc_code,
+            alert_id=alert.id,
+            alert_code=alt_code,
+            review_status=ReviewStatus.UNVERIFIED.value,
+            severity=severity or SeverityLevel.HIGH.value,
+            deduplicated=False,
+            is_synthetic=True,
+            timestamp=now.isoformat(),
+        )
+
+    @staticmethod
     def get_summary(db: Session) -> AnalyticsSummaryResponse:
-        """Return high-level operational overview across all zones."""
+        """Return high-level operational overview across all zones and evaluate thresholds."""
         now = datetime.now(timezone.utc)
         total_occ = 0
         total_cap = 0
         peak_zone = "ZONE-A"
         highest_pct = -1.0
+        zones: List[ZoneMetrics] = []
+        critical_count = 0
 
         for z_key in FICTIONAL_ZONES:
             zm = AnalyticsService.get_zone_metrics(db, z_key, ref_time=now)
             if zm:
+                zones.append(zm)
                 total_occ += zm.current_occupancy
                 total_cap += zm.capacity
+                if zm.occupancy_pct >= 75.0:
+                    critical_count += 1
                 if zm.occupancy_pct > highest_pct:
                     highest_pct = zm.occupancy_pct
                     peak_zone = f"{zm.zone_id} ({zm.zone_name})"
@@ -306,15 +518,37 @@ class AnalyticsService:
 
         uncertainty = "LOW" if overall_pct < 75.0 else ("MODERATE" if overall_pct < 85.0 else "HIGH")
         total_events = db.query(CameraEvent).count()
+        active_alerts = db.query(Alert).filter(Alert.review_status == "UNVERIFIED").count()
+        avg_flow = round(sum(z.flow_velocity_mps for z in zones) / max(1, len(zones)), 2)
+        system_density_ratio = round(_safe_div(total_occ, max(1, total_cap)), 2)
+
+        # Connect synthetic threshold evaluation to backend alert pipeline (Deduplicated, force=False)
+        try:
+            for z in zones:
+                if z.occupancy_pct >= 75.0:
+                    AnalyticsService.trigger_synthetic_incident(
+                        db=db,
+                        zone_id=z.zone_id,
+                        operator_badge="SYSTEM_ANALYTICS",
+                        force=False,
+                    )
+        except Exception:
+            pass
 
         return AnalyticsSummaryResponse(
             overall_network_occupancy_pct=overall_pct,
+            system_density_ratio=system_density_ratio,
+            critical_zones_count=critical_count,
+            total_monitored_zones=len(FICTIONAL_ZONES),
             active_zones_monitored=len(FICTIONAL_ZONES),
+            avg_flow_velocity_mps=avg_flow,
+            active_surge_alerts=active_alerts,
             highest_density_zone=peak_zone,
             flow_status=flow_status,
             data_quality_score=0.98,
             uncertainty_rating=uncertainty,
             total_synthetic_events_processed=total_events,
+            zones=zones,
             is_synthetic=True,
             generated_at=now.isoformat(),
         )
