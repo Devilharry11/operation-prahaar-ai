@@ -16,6 +16,12 @@ export const IncidentManagement: React.FC<IncidentManagementProps> = ({ incident
   const [isLoadingXai, setIsLoadingXai] = useState<boolean>(false);
 
   useEffect(() => {
+    if (!selectedIncident && incidents.length > 0) {
+      setSelectedIncident(incidents[0]);
+    }
+  }, [incidents, selectedIncident]);
+
+  useEffect(() => {
     if (selectedIncident) {
       setIsLoadingXai(true);
       PrahaarAPI.getIncidentExplainability(selectedIncident.id)
