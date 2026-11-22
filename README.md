@@ -190,10 +190,14 @@ Follow these 5 interactive demonstration steps during evaluation:
 
 ## 7. Key Documentation & Academic Defense Artifacts
 
-For comprehensive evaluation and academic defense, review the following documents:
+For comprehensive evaluation, viva preparation, and academic defense, review the following documents:
+- [Complete Project Explanation (Hinglish)](file:///docs/PROJECT_COMPLETE_EXPLANATION.md): Beginner-friendly comprehensive guide.
+- [Professor Presentation Spoken Scripts](file:///docs/PROFESSOR_PRESENTATION_SCRIPT.md): 30s, 1m, 3m, 7m, and tough question scripts.
+- [Project Architecture Explained](file:///docs/PROJECT_ARCHITECTURE_EXPLAINED.md): Diagrams, data flow, folder structures, and 14 tables.
+- [45 Viva Voce Questions & Answers](file:///docs/40_VIVA_QUESTIONS.md): Rigorous professor-level Q&A with Hinglish and technical English.
+- [7-Minute Live Demo Step-by-Step](file:///docs/LIVE_DEMO_STEP_BY_STEP.md): Click-by-click live walkthrough with exact timestamps.
+- [Beginner Technology Stack Guide](file:///docs/BEGINNER_TECHNOLOGY_GUIDE.md): Deep-dive into all 12 tools in the stack.
 - [Academic Defense Presentation (10 Slides)](file:///docs/OPERATION_PRAHAAR_AI_PRESENTATION.md): 10-slide technical and conceptual defense deck.
-- [Professor Live Demo Script (5 Mins)](file:///docs/PROFESSOR_LIVE_DEMO_SCRIPT.md): Minute-by-minute evaluator walkthrough guide.
-- [Professor Defense Q&A (25 Questions)](file:///docs/PROFESSOR_QUESTIONS_AND_ANSWERS.md): Rigorous technical answers covering architecture, XAI, HITL, cryptography, and ethics.
 - [Project Executive One-Page Summary](file:///docs/PROJECT_ONE_PAGE_SUMMARY.md): Complete one-page overview for reviewers.
 - [System Architecture](file:///docs/FINAL_PROJECT_ARCHITECTURE.md): Complete end-to-end technical specification.
 - [Security & Responsible AI Review](file:///docs/FINAL_SECURITY_REVIEW.md): In-depth security, RBAC authorization, and ethical guardrail analysis.
