@@ -14,6 +14,7 @@ from backend.app.api.endpoints import (
     audit,
     demo,
     analytics,
+    governance,
 )
 
 api_router = APIRouter()
@@ -27,4 +28,5 @@ api_router.include_router(reviews.router)
 api_router.include_router(advisories.router)
 api_router.include_router(audit.router)
 api_router.include_router(analytics.router)
+api_router.include_router(governance.router, prefix="/governance", tags=["Multi-Tier Human Governance"])
 api_router.include_router(demo.router, prefix="/demo", tags=["Synthetic Demo Controller"])
