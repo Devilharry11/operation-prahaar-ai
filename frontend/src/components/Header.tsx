@@ -1,7 +1,8 @@
 // Operation Prahaar AI - Modern Enterprise SOC Top Navigation Header
-import React from 'react';
-import { Shield, Radio, Activity, Lock, AlertTriangle, User, Database, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Radio, Activity, Lock, AlertTriangle, User, Database, Sparkles, ChevronDown } from 'lucide-react';
 import { SystemHealth } from '../types';
+import { getActiveBadge, setActiveBadge } from '../services/api';
 
 interface HeaderProps {
   health: SystemHealth | null;
@@ -17,6 +18,26 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDemoController,
 }) => {
   const isBackendLive = health?.database_connected === true;
+  const [activeBadge, setLocalBadge] = useState<string>(getActiveBadge());
+
+  const handleBadgeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newBadge = e.target.value;
+    setActiveBadge(newBadge);
+    setLocalBadge(newBadge);
+  };
+
+  const getBadgeDetails = (badge: string) => {
+    switch (badge) {
+      case 'IND-ADM-001':
+        return { name: 'V. Verma', title: 'Chief Controller', role: 'CHIEF_CONTROLLER', initials: 'VV' };
+      case 'IND-ANA-2094':
+        return { name: 'P. Patel', title: 'Watch Officer', role: 'INTELLIGENCE_ANALYST', initials: 'PP' };
+      default:
+        return { name: 'R. Sharma', title: 'Control Operator', role: 'COMMAND_OPERATOR', initials: 'RS' };
+    }
+  };
+
+  const details = getBadgeDetails(activeBadge);
 
   return (
     <header className="bg-[#10161C] border-b border-[#2A3540] px-5 py-2.5 flex items-center justify-between sticky top-0 z-50">
@@ -103,14 +124,28 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* User Identity Display */}
-        <div className="hidden lg:flex items-center space-x-2 bg-[#151D25] text-slate-200 px-3 py-1 rounded border border-[#2A3540] text-xs">
+        {/* Operator Role Switcher Dropdown */}
+        <div className="flex items-center space-x-2 bg-[#151D25] text-slate-200 px-2.5 py-1 rounded border border-[#2A3540] text-xs">
           <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px] text-emerald-400 font-bold">
-            KV
+            {details.initials}
           </div>
           <div className="text-left leading-none">
-            <div className="font-medium text-slate-200 text-[11px]">Insp. K. Verma</div>
-            <div className="text-[9px] text-[#94A3B8] font-mono">OPR-4081</div>
+            <select
+              value={activeBadge}
+              onChange={handleBadgeChange}
+              className="bg-transparent text-slate-200 text-[11px] font-semibold focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="IND-OPR-4081" className="bg-[#151D25] text-white">
+                R. Sharma (Operator: Tier 1)
+              </option>
+              <option value="IND-ANA-2094" className="bg-[#151D25] text-white">
+                P. Patel (Watch Officer: Tier 2)
+              </option>
+              <option value="IND-ADM-001" className="bg-[#151D25] text-white">
+                V. Verma (Chief Controller: Tier 3)
+              </option>
+            </select>
+            <div className="text-[9px] text-[#94A3B8] font-mono">{activeBadge}</div>
           </div>
         </div>
       </div>

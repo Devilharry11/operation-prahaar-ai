@@ -59,7 +59,7 @@ export interface Incident {
   incident_code: string;
   title: string;
   description: string;
-  status: 'NEW' | 'UNDER_REVIEW' | 'VERIFIED' | 'DISMISSED' | 'ESCALATED' | 'RESOLVED';
+  status: 'NEW' | 'UNDER_REVIEW' | 'VERIFIED' | 'DISMISSED' | 'ESCALATED' | 'TACTICAL_CONFIRMED' | 'ADVISORY_PUBLISHED' | 'ADVISORY_REJECTED' | 'RESOLVED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   confidence_score: number;
   uncertainty_level: 'LOW' | 'MODERATE' | 'HIGH';
@@ -118,8 +118,11 @@ export interface AuditLog {
   actor_id: string;
   ip_address: string;
   action_summary: string;
+  record_reference?: string;
   before_state_json?: string;
   after_state_json?: string;
+  previous_hash?: string;
+  current_hash?: string;
   created_at: string;
 }
 
@@ -180,4 +183,135 @@ export interface DemoHistoryItem {
   review_status: string;
   confidence_score: number;
   created_at: string;
+}
+
+// Phase C: Aggregate Analytics Types
+export interface ZoneMetrics {
+  zone_id: string;
+  zone_name: string;
+  capacity_limit: number;
+  current_occupancy: number;
+  occupancy_ratio: number;
+  flow_velocity_mps: number;
+  congestion_level: 'NOMINAL' | 'MODERATE' | 'CRITICAL';
+  density_trend: 'STABLE' | 'RISING' | 'FALLING';
+  uncertainty_score: number;
+  is_synthetic: boolean;
+}
+
+export interface TrendPoint {
+  timestamp: string;
+  zone_id: string;
+  avg_density: number;
+  flow_rate_mps: number;
+  sample_count: number;
+}
+
+export interface HotspotItem {
+  zone_id: string;
+  zone_name: string;
+  congestion_level: string;
+  occupancy_ratio: number;
+  risk_rank: number;
+}
+
+export interface AnalyticsSummary {
+  system_density_ratio: number;
+  critical_zones_count: number;
+  total_monitored_zones: number;
+  avg_flow_velocity_mps: number;
+  active_surge_alerts: number;
+  zones: ZoneMetrics[];
+  is_synthetic: boolean;
+  generated_at: string;
+}
+
+// Phase C: Explainable AI (XAI) Types
+export interface AttributionFactor {
+  factor_name: string;
+  measured_value: string;
+  safety_baseline: string;
+  weight_pct: number;
+  diagnostic: string;
+}
+
+export interface IncidentExplainability {
+  incident_id: string;
+  incident_code: string;
+  title: string;
+  rule_id: string;
+  rule_description: string;
+  confidence_score: number;
+  uncertainty_level: string;
+  data_quality_score: number;
+  factors: AttributionFactor[];
+  reproducible_hash: string;
+  non_identifying_disclaimer: string;
+  is_synthetic: boolean;
+}
+
+// Phase C: Multi-Tier Human Governance Types
+export interface GovernanceQueueItem {
+  tier: number;
+  incident_id: string;
+  incident_code: string;
+  title: string;
+  severity: string;
+  status: string;
+  confidence_score: number;
+  uncertainty_level: string;
+  tier1_status?: string;
+  tier1_rationale?: string;
+  tier2_status?: string;
+  tier2_explanation?: string;
+  created_at: string;
+  is_synthetic: boolean;
+}
+
+export interface GovernanceQueueResponse {
+  tier1_pending: GovernanceQueueItem[];
+  tier2_pending: GovernanceQueueItem[];
+  tier3_pending: GovernanceQueueItem[];
+  total_pending: number;
+  is_synthetic: boolean;
+  generated_at: string;
+}
+
+export interface GovernanceReviewResponse {
+  success: boolean;
+  tier: number;
+  incident_id: string;
+  incident_code: string;
+  action: string;
+  new_status: string;
+  operator_badge: string;
+  timestamp: string;
+  audit_log_id: string;
+  message: string;
+  is_synthetic: boolean;
+}
+
+// Phase C: Cryptographic Audit Verification Types
+export interface TamperedAuditRecord {
+  audit_id: string;
+  record_reference?: string;
+  event_type: string;
+  actor_id: string;
+  stored_hash?: string;
+  recomputed_hash: string;
+  stored_previous_hash?: string;
+  expected_previous_hash?: string;
+  reason: string;
+}
+
+export interface AuditVerificationResponse {
+  is_valid: boolean;
+  total_records_checked: number;
+  tampered_count: number;
+  tampered_records: TamperedAuditRecord[];
+  chain_head_hash?: string;
+  genesis_hash: string;
+  verification_timestamp: string;
+  message: string;
+  is_synthetic: boolean;
 }

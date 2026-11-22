@@ -1,7 +1,8 @@
-// Operation Prahaar AI - Incident Management (Enterprise SOC Redesign)
-import React, { useState } from 'react';
-import { FolderKanban, Shield, AlertTriangle, ArrowRight } from 'lucide-react';
-import { Incident } from '../types';
+// Operation Prahaar AI - Incident Management & Explainable AI (XAI) (Phase C Milestone C.2)
+import React, { useState, useEffect } from 'react';
+import { FolderKanban, Shield, AlertTriangle, ArrowRight, Brain, Cpu, CheckCircle2, Info } from 'lucide-react';
+import { Incident, IncidentExplainability } from '../types';
+import { PrahaarAPI } from '../services/api';
 import { SectionHeader, StatusBadge } from '../components/Common';
 
 interface IncidentManagementProps {
@@ -11,12 +12,24 @@ interface IncidentManagementProps {
 
 export const IncidentManagement: React.FC<IncidentManagementProps> = ({ incidents, onNavigate }) => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(incidents[0] || null);
+  const [xaiData, setXaiData] = useState<IncidentExplainability | null>(null);
+  const [isLoadingXai, setIsLoadingXai] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedIncident) {
+      setIsLoadingXai(true);
+      PrahaarAPI.getIncidentExplainability(selectedIncident.id)
+        .then((data) => setXaiData(data))
+        .catch((err) => console.error('Failed to load XAI explainability', err))
+        .finally(() => setIsLoadingXai(false));
+    }
+  }, [selectedIncident]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <SectionHeader
-        title="Incident Management Dossier"
-        subtitle="Correlated situational assessments synthesizing multi-camera spatial events and agency threat advisories."
+        title="Incident Management & Explainable AI (XAI) Dossier"
+        subtitle="Correlated situational assessments synthesizing multi-camera spatial events, agency advisories, and reproducible XAI factor breakdowns."
         icon={FolderKanban}
       />
 
@@ -75,44 +88,79 @@ export const IncidentManagement: React.FC<IncidentManagementProps> = ({ incident
                 {selectedIncident.description}
               </div>
 
-              {/* Explainability Engine Card */}
-              <div className="bg-[#10161C] border border-[#2A3540] rounded-lg p-4 space-y-3">
+              {/* Explainable AI Factor Breakdown */}
+              <div className="bg-[#10161C] border border-[#2A3540] rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">
-                    AI Explainability & Reasoning Metrics
-                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <Brain className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">
+                      Transparent Attribution Factor Breakdown (XAI)
+                    </h4>
+                  </div>
                   <StatusBadge status={`Uncertainty: ${selectedIncident.uncertainty_level}`} variant="amber" />
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">{selectedIncident.explanation}</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs font-mono bg-[#151D25] p-3 rounded border border-[#2A3540]">
-                  <div>
-                    <span className="text-[#94A3B8] block text-[10px]">Triggered Rule:</span>
-                    <span className="text-white font-semibold">{selectedIncident.triggered_rule}</span>
-                  </div>
-                  <div>
-                    <span className="text-[#94A3B8] block text-[10px]">Confidence Score:</span>
-                    <span className="text-emerald-400 font-bold">
-                      {(selectedIncident.confidence_score * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[#94A3B8] block text-[10px]">Current Status:</span>
-                    <span className="text-white font-semibold">{selectedIncident.status}</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Chain of Custody & Privacy Safeguard Note */}
-              <div className="text-[11px] text-[#94A3B8] flex items-center space-x-2 pt-1 font-sans">
-                <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                  All operator verification determinations are permanently recorded in the immutable audit ledger.
-                </span>
+                {xaiData ? (
+                  <div className="space-y-3">
+                    <div className="text-xs font-mono bg-[#151D25] p-3 rounded border border-[#2A3540] space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-[#94A3B8]">Applied Heuristic Rule:</span>
+                        <span className="text-white font-bold">{xaiData.rule_id}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 font-sans">{xaiData.rule_description}</p>
+                    </div>
+
+                    {/* Attribution Factors Table */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider block">
+                        Measured Telemetry vs Safety Baseline:
+                      </span>
+                      {xaiData.factors.map((f, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-[#151D25] border border-[#2A3540] p-3 rounded text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between font-mono">
+                            <span className="font-bold text-white">{f.factor_name}</span>
+                            <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded text-[10px]">
+                              Weight: {f.weight_pct}%
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#94A3B8]">
+                            <div>Measured: <span className="text-amber-300 font-semibold">{f.measured_value}</span></div>
+                            <div>Baseline: <span className="text-slate-300">{f.safety_baseline}</span></div>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-sans pt-1 border-t border-[#2A3540]/60">
+                            {f.diagnostic}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Metadata footer */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 text-[10px] font-mono text-[#94A3B8] border-t border-[#2A3540]">
+                      <div>
+                        Sensor Data Quality: <span className="text-emerald-400 font-bold">{(xaiData.data_quality_score * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="text-right">
+                        Evaluation Hash: <span className="text-white font-mono">{xaiData.reproducible_hash.substring(0, 16)}...</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 bg-blue-950/40 border border-blue-900/60 rounded text-[11px] font-sans text-blue-200">
+                      {xaiData.non_identifying_disclaimer}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400 py-6 text-center font-mono">
+                    {isLoadingXai ? 'Synthesizing XAI factor weights...' : selectedIncident.explanation}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
-            <div className="text-center py-16 text-[#94A3B8] text-xs">
-              Select an incident from the ledger to inspect explainability metrics.
+            <div className="text-center py-20 text-[#94A3B8] text-xs">
+              Select an incident to view situational assessment and XAI reasoning.
             </div>
           )}
         </div>

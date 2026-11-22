@@ -1,4 +1,4 @@
-// Operation Prahaar AI - API Client with Built-in Fallback Resilience
+// Operation Prahaar AI - API Client with Built-in Fallback Resilience & Phase C Extensions
 
 import {
   SystemHealth,
@@ -13,18 +13,43 @@ import {
   DemoEventResponse,
   DemoResetResponse,
   DemoHistoryItem,
+  ZoneMetrics,
+  TrendPoint,
+  HotspotItem,
+  AnalyticsSummary,
+  IncidentExplainability,
+  GovernanceQueueResponse,
+  GovernanceReviewResponse,
+  AuditVerificationResponse,
 } from '../types';
 
 const API_BASE = 'http://127.0.0.1:8000/api/v1';
 
+export function getActiveBadge(): string {
+  try {
+    return localStorage.getItem('prahaar_active_badge') || 'IND-OPR-4081';
+  } catch {
+    return 'IND-OPR-4081';
+  }
+}
+
+export function setActiveBadge(badge: string): void {
+  try {
+    localStorage.setItem('prahaar_active_badge', badge);
+  } catch {
+    // ignore
+  }
+}
+
 // Helper for safe fetch with mock fallback (Read-only operations)
 async function fetchWithFallback<T>(url: string, mockFallback: T, options?: RequestInit): Promise<T> {
+  const badge = getActiveBadge();
   try {
     const res = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'X-Operator-Badge': 'IND-OPR-4081',
+        'X-Operator-Badge': badge,
         ...options?.headers,
       },
     });
@@ -40,11 +65,12 @@ async function fetchWithFallback<T>(url: string, mockFallback: T, options?: Requ
 
 // Helper for mutation requests: strictly throws on error; NEVER fakes success
 async function fetchMutation<T>(url: string, options?: RequestInit): Promise<T> {
+  const badge = getActiveBadge();
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-Operator-Badge': 'IND-OPR-4081',
+      'X-Operator-Badge': badge,
       ...options?.headers,
     },
   });
@@ -62,6 +88,10 @@ async function fetchMutation<T>(url: string, options?: RequestInit): Promise<T> 
 }
 
 export const PrahaarAPI = {
+  // Badge management
+  getActiveBadge,
+  setActiveBadge,
+
   // 1. Health
   async getHealth(): Promise<SystemHealth> {
     return fetchWithFallback<SystemHealth>('/health', {
@@ -93,143 +123,35 @@ export const PrahaarAPI = {
         edge_device_id: 'edge-01',
         created_at: new Date(Date.now() - 3600000).toISOString(),
       },
-      {
-        id: 'cam-rf-02',
-        camera_code: 'CAM-RF-PERIMETER-02',
-        name: 'Lahori Gate West Security Perimeter',
-        stream_url: 'data/samples/sample_test.mp4',
-        status: 'ONLINE',
-        resolution: '640x360',
-        fps: 5,
-        zone_polygon_json: '[{"x": 100, "y": 200}, {"x": 400, "y": 200}, {"x": 400, "y": 320}, {"x": 100, "y": 320}]',
-        location_id: 'loc-del-rf',
-        edge_device_id: 'edge-02',
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-      },
     ]);
   },
 
   // 3. Edge Devices
   async getEdgeDevices(): Promise<EdgeDevice[]> {
-    return fetchWithFallback<EdgeDevice[]>('/edge-devices', [
-      {
-        id: 'edge-01',
-        device_id: 'EDGE-IND-DELHI-001',
-        name: 'Virtual Edge Node 01 (Laptop Simulator)',
-        device_type: 'VIRTUAL_LAPTOP',
-        ip_address: '127.0.0.1',
-        status: 'ONLINE',
-        cpu_usage_pct: 17.4,
-        ram_usage_mb: 215.4,
-        uptime_seconds: 7200,
-        last_heartbeat: new Date().toISOString(),
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: 'edge-02',
-        device_id: 'EDGE-IND-DELHI-002',
-        name: 'Red Fort Mini-PC Appliance (Simulated)',
-        device_type: 'MINI_PC',
-        ip_address: '127.0.0.1',
-        status: 'ONLINE',
-        cpu_usage_pct: 23.1,
-        ram_usage_mb: 268.0,
-        uptime_seconds: 14400,
-        last_heartbeat: new Date().toISOString(),
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<EdgeDevice[]>('/health', [] as any);
   },
 
   // 4. Camera Events
   async getEvents(): Promise<CameraEvent[]> {
-    return fetchWithFallback<CameraEvent[]>('/events', [
-      {
-        id: 'evt-01',
-        camera_id: 'cam-ndls-01',
-        edge_device_id: 'edge-01',
-        event_type: 'HIGH_CROWD_CONGESTION',
-        severity: 'HIGH',
-        crowd_density_score: 0.84,
-        motion_energy: 62.5,
-        bounding_boxes_json: '[{"x": 120, "y": 150, "w": 40, "h": 70}, {"x": 180, "y": 155, "w": 38, "h": 68}]',
-        timestamp: new Date(Date.now() - 900000).toISOString(),
-      },
-      {
-        id: 'evt-02',
-        camera_id: 'cam-rf-02',
-        edge_device_id: 'edge-02',
-        event_type: 'RESTRICTED_ZONE_ENTRY',
-        severity: 'MEDIUM',
-        crowd_density_score: 0.32,
-        motion_energy: 28.0,
-        bounding_boxes_json: '[{"x": 150, "y": 210, "w": 30, "h": 65}]',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<CameraEvent[]>('/events', []);
   },
 
   // 5. Incidents
   async getIncidents(): Promise<Incident[]> {
-    return fetchWithFallback<Incident[]>('/incidents', [
-      {
-        id: 'inc-01',
-        incident_code: 'INC-2026-0001',
-        title: 'Rapid Pedestrian Congestion Build-up at Concourse South',
-        description: 'Edge vision detected density ratio 0.84 exceeding the 0.75 threshold during active transit advisory.',
-        status: 'NEW',
-        priority: 'HIGH',
-        confidence_score: 0.87,
-        uncertainty_level: 'LOW',
-        explanation: 'Spatial density sustained >80% for 20+ seconds in designated pedestrian walkway; matches advisory ADV-MHA-2026-08.',
-        triggered_rule: 'CONGESTION_RAPID_BUILDUP_RULE',
-        location_id: 'loc-del-ndls',
-        created_at: new Date(Date.now() - 900000).toISOString(),
-        updated_at: new Date(Date.now() - 900000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<Incident[]>('/incidents', []);
   },
 
   // 6. Alerts
   async getAlerts(): Promise<Alert[]> {
-    return fetchWithFallback<Alert[]>('/alerts', [
-      {
-        id: 'alt-01',
-        alert_code: 'ALT-2026-0001',
-        incident_id: 'inc-01',
-        camera_id: 'cam-ndls-01',
-        alert_type: 'CROWD_CONGESTION_WARNING',
-        severity: 'HIGH',
-        title: 'High Density Anomaly - Platform 1 Concourse',
-        summary: 'Density 84% at NDLS Concourse South. Awaiting authorized human review before escalation.',
-        review_status: 'UNVERIFIED',
-        is_actionable: true,
-        created_at: new Date(Date.now() - 840000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<Alert[]>('/alerts', []);
   },
 
   // 7. Security Advisories
   async getAdvisories(): Promise<SecurityAdvisory[]> {
-    return fetchWithFallback<SecurityAdvisory[]>('/advisories', [
-      {
-        id: 'adv-01',
-        advisory_code: 'ADV-MHA-2026-08',
-        issuing_agency: 'Bureau of Public Safety Intelligence',
-        title: 'Heightened Vigilance Advisory: Public Transit Nodes',
-        summary: 'Pre-national festival intelligence suggests increased crowd vulnerability at northern rail transit terminals.',
-        threat_level: 'ELEVATED',
-        target_locations: 'New Delhi Railway Station, Old Delhi, Anand Vihar Terminus',
-        recommended_actions: 'Enforce strict congestion monitoring at concourse bottlenecks; flag abrupt crowd counter-flows.',
-        valid_from: new Date(Date.now() - 172800000).toISOString(),
-        valid_to: new Date(Date.now() + 432000000).toISOString(),
-        is_active: true,
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<SecurityAdvisory[]>('/advisories', []);
   },
 
-  // 8. Submit Human Review
+  // 8. Submit Human Review (Legacy / Direct)
   async submitReview(payload: {
     incident_id: string;
     alert_id?: string;
@@ -237,43 +159,18 @@ export const PrahaarAPI = {
     action: 'VERIFIED' | 'DISMISSED' | 'ESCALATED';
     rationale: string;
   }): Promise<HumanReview> {
-    return fetchWithFallback<HumanReview>(
-      '/reviews',
-      {
-        id: `rev-${Date.now()}`,
-        incident_id: payload.incident_id,
-        alert_id: payload.alert_id,
-        reviewer_id: payload.reviewer_badge_or_username,
-        action: payload.action,
-        rationale: payload.rationale,
-        prior_status: 'NEW',
-        new_status: payload.action,
-        reviewed_at: new Date().toISOString(),
-      },
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchMutation<HumanReview>('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   // 9. Audit Logs
   async getAuditLogs(): Promise<AuditLog[]> {
-    return fetchWithFallback<AuditLog[]>('/audit-logs', [
-      {
-        id: 'aud-01',
-        event_type: 'INCIDENT_CREATED',
-        actor_id: 'SYSTEM_INTELLIGENCE_ENGINE',
-        ip_address: '127.0.0.1',
-        action_summary: 'Synthesized Incident INC-2026-0001 from Edge Camera Event CAM-NDLS-CONCOURSE-01',
-        before_state_json: '{"status": "NONE"}',
-        after_state_json: '{"incident_code": "INC-2026-0001", "status": "NEW", "review_status": "UNVERIFIED"}',
-        created_at: new Date(Date.now() - 900000).toISOString(),
-      },
-    ]);
+    return fetchWithFallback<AuditLog[]>('/audit-logs', []);
   },
 
-  // 10. Phase B: Synthetic Demo Controller (Strict mutation error propagation)
+  // 10. Phase B: Synthetic Demo Controller
   async generateDemoEvent(
     payload: {
       scenario: string;
@@ -281,12 +178,13 @@ export const PrahaarAPI = {
       severity?: string;
       custom_note?: string;
     },
-    operatorBadge: string = 'IND-OPR-4081'
+    operatorBadge?: string
   ): Promise<DemoEventResponse> {
+    const badge = operatorBadge || getActiveBadge();
     return fetchMutation<DemoEventResponse>('/demo/generate', {
       method: 'POST',
       headers: {
-        'X-Operator-Badge': operatorBadge,
+        'X-Operator-Badge': badge,
       },
       body: JSON.stringify(payload),
     });
@@ -294,24 +192,26 @@ export const PrahaarAPI = {
 
   async generateDemoBatch(
     payload: { count: number; camera_id?: string },
-    operatorBadge: string = 'IND-OPR-4081'
+    operatorBadge?: string
   ): Promise<DemoEventResponse[]> {
+    const badge = operatorBadge || getActiveBadge();
     return fetchMutation<DemoEventResponse[]>('/demo/generate-batch', {
       method: 'POST',
       headers: {
-        'X-Operator-Badge': operatorBadge,
+        'X-Operator-Badge': badge,
       },
       body: JSON.stringify(payload),
     });
   },
 
-  async getDemoHistory(limit: number = 20, operatorBadge: string = 'IND-OPR-4081'): Promise<DemoHistoryItem[]> {
+  async getDemoHistory(limit: number = 20, operatorBadge?: string): Promise<DemoHistoryItem[]> {
+    const badge = operatorBadge || getActiveBadge();
     return fetchWithFallback<DemoHistoryItem[]>(
       `/demo/history?limit=${limit}`,
       [],
       {
         headers: {
-          'X-Operator-Badge': operatorBadge,
+          'X-Operator-Badge': badge,
         },
       }
     );
@@ -319,14 +219,199 @@ export const PrahaarAPI = {
 
   async resetDemoData(
     payload: { confirm: boolean; operator_badge?: string },
-    operatorBadge: string = 'IND-OPR-4081'
+    operatorBadge?: string
   ): Promise<DemoResetResponse> {
+    const badge = operatorBadge || getActiveBadge();
     return fetchMutation<DemoResetResponse>('/demo/reset', {
       method: 'POST',
       headers: {
-        'X-Operator-Badge': operatorBadge,
+        'X-Operator-Badge': badge,
       },
       body: JSON.stringify(payload),
+    });
+  },
+
+  // ==========================================
+  // Phase C: Milestone C.1 — Aggregate Analytics
+  // ==========================================
+  async getAnalyticsTrends(zone?: string): Promise<TrendPoint[]> {
+    const query = zone ? `?zone=${encodeURIComponent(zone)}` : '';
+    return fetchWithFallback<TrendPoint[]>(`/analytics/trends${query}`, []);
+  },
+
+  async getAnalyticsHotspots(): Promise<HotspotItem[]> {
+    return fetchWithFallback<HotspotItem[]>('/analytics/hotspots', []);
+  },
+
+  async getAnalyticsSummary(): Promise<AnalyticsSummary> {
+    return fetchWithFallback<AnalyticsSummary>('/analytics/summary', {
+      system_density_ratio: 0.62,
+      critical_zones_count: 1,
+      total_monitored_zones: 4,
+      avg_flow_velocity_mps: 1.15,
+      active_surge_alerts: 1,
+      zones: [
+        {
+          zone_id: 'ZONE-A',
+          zone_name: 'Main Concourse',
+          capacity_limit: 500,
+          current_occupancy: 380,
+          occupancy_ratio: 0.76,
+          flow_velocity_mps: 0.95,
+          congestion_level: 'MODERATE',
+          density_trend: 'RISING',
+          uncertainty_score: 0.12,
+          is_synthetic: true,
+        },
+        {
+          zone_id: 'ZONE-B',
+          zone_name: 'Entry Hall',
+          capacity_limit: 300,
+          current_occupancy: 255,
+          occupancy_ratio: 0.85,
+          flow_velocity_mps: 0.72,
+          congestion_level: 'CRITICAL',
+          density_trend: 'RISING',
+          uncertainty_score: 0.14,
+          is_synthetic: true,
+        },
+        {
+          zone_id: 'ZONE-C',
+          zone_name: 'Waiting Area',
+          capacity_limit: 400,
+          current_occupancy: 180,
+          occupancy_ratio: 0.45,
+          flow_velocity_mps: 1.35,
+          congestion_level: 'NOMINAL',
+          density_trend: 'STABLE',
+          uncertainty_score: 0.08,
+          is_synthetic: true,
+        },
+        {
+          zone_id: 'ZONE-D',
+          zone_name: 'Exit Corridor',
+          capacity_limit: 250,
+          current_occupancy: 105,
+          occupancy_ratio: 0.42,
+          flow_velocity_mps: 1.48,
+          congestion_level: 'NOMINAL',
+          density_trend: 'FALLING',
+          uncertainty_score: 0.10,
+          is_synthetic: true,
+        },
+      ],
+      is_synthetic: true,
+      generated_at: new Date().toISOString(),
+    });
+  },
+
+  // ==========================================
+  // Phase C: Milestone C.2 — Explainable AI (XAI)
+  // ==========================================
+  async getIncidentExplainability(incidentId: string): Promise<IncidentExplainability> {
+    return fetchWithFallback<IncidentExplainability>(
+      `/incidents/${incidentId}/explainability`,
+      {
+        incident_id: incidentId,
+        incident_code: 'INC-DEMO',
+        title: '[SYNTHETIC DEMO] Explainability Factor Assessment',
+        rule_id: 'DEMO_OCCUPANCY_THRESHOLD_RULE',
+        rule_description: 'Heuristic spatial threshold evaluation triggered on aggregate crowd influx.',
+        confidence_score: 0.86,
+        uncertainty_level: 'LOW',
+        data_quality_score: 0.94,
+        factors: [
+          {
+            factor_name: 'Aggregate Headcount Density',
+            measured_value: '380 occupants (76% envelope)',
+            safety_baseline: 'Max 375 occupants (75% threshold)',
+            weight_pct: 45.0,
+            diagnostic: 'Measured spatial volume exceeds safety comfort threshold.',
+          },
+          {
+            factor_name: 'Flow Velocity Deceleration',
+            measured_value: '0.95 m/s',
+            safety_baseline: 'Nominal 1.30 m/s',
+            weight_pct: 35.0,
+            diagnostic: 'Pedestrian velocity slowed below nominal egress corridor benchmark.',
+          },
+          {
+            factor_name: 'Edge Telemetry Quality & Frame Rate',
+            measured_value: '5 FPS (0 dropped frames)',
+            safety_baseline: 'Min 4 FPS',
+            weight_pct: 20.0,
+            diagnostic: 'Edge hardware operational with high sensor confidence.',
+          },
+        ],
+        reproducible_hash: 'd3b07384d113edec49eaa6238ad5ff00',
+        non_identifying_disclaimer:
+          'ATTENTION: This assessment is derived strictly from non-identifying aggregate occupancy and motion metrics. Zero facial recognition or individual tracking.',
+        is_synthetic: true,
+      }
+    );
+  },
+
+  // ==========================================
+  // Phase C: Milestone C.3 — Multi-Tier Human Governance
+  // ==========================================
+  async getGovernanceQueues(): Promise<GovernanceQueueResponse> {
+    return fetchWithFallback<GovernanceQueueResponse>('/governance/queue', {
+      tier1_pending: [],
+      tier2_pending: [],
+      tier3_pending: [],
+      total_pending: 0,
+      is_synthetic: true,
+      generated_at: new Date().toISOString(),
+    });
+  },
+
+  async submitTier1Review(payload: {
+    incident_id: string;
+    alert_id?: string;
+    action: 'VERIFIED' | 'DISMISSED';
+    rationale: string;
+  }): Promise<GovernanceReviewResponse> {
+    return fetchMutation<GovernanceReviewResponse>('/governance/tier1', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async submitTier2Review(payload: {
+    incident_id: string;
+    action: 'CONFIRMED' | 'RETURNED';
+    explanation: string;
+  }): Promise<GovernanceReviewResponse> {
+    return fetchMutation<GovernanceReviewResponse>('/governance/tier2', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async submitTier3Review(payload: {
+    incident_id: string;
+    advisory_id?: string;
+    action: 'APPROVED' | 'REJECTED';
+    controller_comments: string;
+  }): Promise<GovernanceReviewResponse> {
+    return fetchMutation<GovernanceReviewResponse>('/governance/tier3', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // ==========================================
+  // Phase C: Milestone C.4 — Cryptographic Audit Verification
+  // ==========================================
+  async verifyAuditChain(): Promise<AuditVerificationResponse> {
+    return fetchMutation<AuditVerificationResponse>('/audit-logs/verify-chain', {
+      method: 'POST',
+    });
+  },
+
+  async backfillAuditChain(): Promise<{ success: boolean; records_backfilled: number; message: string }> {
+    return fetchMutation<{ success: boolean; records_backfilled: number; message: string }>('/audit-logs/backfill-chain', {
+      method: 'POST',
     });
   },
 };

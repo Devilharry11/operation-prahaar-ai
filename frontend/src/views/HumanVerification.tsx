@@ -1,8 +1,8 @@
-// Operation Prahaar AI - Human Verification Console (Enterprise SOC Redesign)
-import React, { useState } from 'react';
-import { UserCheck, ShieldCheck, CheckCircle, XCircle, ArrowUpRight } from 'lucide-react';
-import { Alert, Incident } from '../types';
-import { PrahaarAPI } from '../services/api';
+// Operation Prahaar AI - 3-Tier Human Verification Console (Phase C Milestone C.3)
+import React, { useState, useEffect } from 'react';
+import { UserCheck, ShieldCheck, CheckCircle, XCircle, ArrowUpRight, AlertTriangle, Layers, RotateCcw, FileText } from 'lucide-react';
+import { Alert, Incident, GovernanceQueueResponse, GovernanceQueueItem } from '../types';
+import { PrahaarAPI, getActiveBadge } from '../services/api';
 import { SectionHeader, StatusBadge } from '../components/Common';
 
 interface HumanVerificationProps {
@@ -16,53 +16,141 @@ export const HumanVerification: React.FC<HumanVerificationProps> = ({
   incidents,
   onReviewCompleted,
 }) => {
-  const unverifiedAlerts = alerts.filter((a) => a.review_status === 'UNVERIFIED');
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(unverifiedAlerts[0] || null);
-  const [reviewerBadge, setReviewerBadge] = useState<string>('IND-OPR-4081');
+  const [activeTier, setActiveTier] = useState<1 | 2 | 3>(1);
+  const [queues, setQueues] = useState<GovernanceQueueResponse | null>(null);
+  const [selectedItem, setSelectedItem] = useState<GovernanceQueueItem | null>(null);
   const [rationale, setRationale] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const activeBadge = getActiveBadge();
 
-  const linkedIncident = incidents.find((i) => i.id === selectedAlert?.incident_id);
+  const loadQueues = async () => {
+    try {
+      const q = await PrahaarAPI.getGovernanceQueues();
+      setQueues(q);
 
-  const handleAction = async (action: 'VERIFIED' | 'DISMISSED' | 'ESCALATED') => {
-    if (!selectedAlert || !linkedIncident) return;
-    if (!rationale.trim() || rationale.length < 5) {
-      setStatusMessage({ type: 'error', text: 'Operational rationale is mandatory (minimum 5 characters).' });
+      // Auto-select first pending item in current tier
+      const currentList = activeTier === 1 ? q.tier1_pending : activeTier === 2 ? q.tier2_pending : q.tier3_pending;
+      if (currentList.length > 0 && (!selectedItem || !currentList.find((i) => i.incident_id === selectedItem.incident_id))) {
+        setSelectedItem(currentList[0]);
+      } else if (currentList.length === 0) {
+        setSelectedItem(null);
+      }
+    } catch (err) {
+      console.error('Failed to load governance queues', err);
+    }
+  };
+
+  useEffect(() => {
+    loadQueues();
+  }, [activeTier]);
+
+  const handleTier1 = async (action: 'VERIFIED' | 'DISMISSED') => {
+    if (!selectedItem) return;
+    if (rationale.trim().length < 15) {
+      setStatusMessage({ type: 'error', text: 'Operational rationale is mandatory and must be at least 15 characters.' });
       return;
     }
 
     setIsSubmitting(true);
     setStatusMessage(null);
-
     try {
-      await PrahaarAPI.submitReview({
-        incident_id: linkedIncident.id,
-        alert_id: selectedAlert.id,
-        reviewer_badge_or_username: reviewerBadge,
+      const res = await PrahaarAPI.submitTier1Review({
+        incident_id: selectedItem.incident_id,
         action,
-        rationale,
+        rationale: rationale.trim(),
       });
-
       setStatusMessage({
         type: 'success',
-        text: `Incident ${linkedIncident.incident_code} successfully marked as ${action} by Officer ${reviewerBadge}. Tamper-evident audit log appended.`,
+        text: `Tier 1: Incident ${res.incident_code} marked as ${res.action} by ${res.operator_badge}. Status: ${res.new_status}.`,
       });
       setRationale('');
+      await loadQueues();
       onReviewCompleted();
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message || 'Verification submission failed.' });
+      setStatusMessage({ type: 'error', text: err.message || 'Tier 1 submission failed.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleTier2 = async (action: 'CONFIRMED' | 'RETURNED') => {
+    if (!selectedItem) return;
+    if (rationale.trim().length < 15) {
+      setStatusMessage({ type: 'error', text: 'Supervisory explanation is mandatory and must be at least 15 characters.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await PrahaarAPI.submitTier2Review({
+        incident_id: selectedItem.incident_id,
+        action,
+        explanation: rationale.trim(),
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `Tier 2: Watch Officer (${res.operator_badge}) marked Incident ${res.incident_code} as ${res.action}. Status: ${res.new_status}.`,
+      });
+      setRationale('');
+      await loadQueues();
+      onReviewCompleted();
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Tier 2 submission failed.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTier3 = async (action: 'APPROVED' | 'REJECTED') => {
+    if (!selectedItem) return;
+    if (rationale.trim().length < 15) {
+      setStatusMessage({ type: 'error', text: 'Chief Controller sign-off comments must be at least 15 characters.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await PrahaarAPI.submitTier3Review({
+        incident_id: selectedItem.incident_id,
+        action,
+        controller_comments: rationale.trim(),
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `Tier 3: Chief Controller (${res.operator_badge}) ${res.action} public safety advisory for ${res.incident_code}. Status: ${res.new_status}.`,
+      });
+      setRationale('');
+      await loadQueues();
+      onReviewCompleted();
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Tier 3 executive submission failed.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const t1Count = queues?.tier1_pending.length || 0;
+  const t2Count = queues?.tier2_pending.length || 0;
+  const t3Count = queues?.tier3_pending.length || 0;
+  const currentQueueList = activeTier === 1 ? queues?.tier1_pending || [] : activeTier === 2 ? queues?.tier2_pending || [] : queues?.tier3_pending || [];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <SectionHeader
-        title="Human Verification Console (HITL Safeguard)"
-        subtitle="Mandatory Human-in-the-Loop decision gate. AI provides context & uncertainty ratings; authorized human officer decides."
+        title="Multi-Tier Human Governance Console (HITL)"
+        subtitle="Mandatory 3-stage human-in-the-loop decision gate: Operator Verification -> Watch Officer Confirmation -> Chief Controller Sign-off."
         icon={UserCheck}
+        actions={
+          <div className="flex items-center space-x-2 font-mono text-[11px]">
+            <span className="text-[#94A3B8]">Active Operator:</span>
+            <span className="bg-[#151D25] text-emerald-300 border border-[#2A3540] px-2 py-0.5 rounded font-bold">
+              {activeBadge}
+            </span>
+          </div>
+        }
       />
 
       {statusMessage && (
@@ -77,146 +165,277 @@ export const HumanVerification: React.FC<HumanVerificationProps> = ({
         </div>
       )}
 
+      {/* 3 Tier Navigation Tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          onClick={() => { setActiveTier(1); setStatusMessage(null); }}
+          className={`p-3.5 rounded-lg border text-left transition-all ${
+            activeTier === 1
+              ? 'bg-[#151D25] border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.15)] text-white'
+              : 'bg-[#10161C] border-[#2A3540] text-slate-400 hover:bg-[#151D25]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center space-x-1.5">
+              <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-emerald-400">1</span>
+              <span>Tier 1: Operator Review</span>
+            </span>
+            <span className={`px-2 py-0.5 text-[10px] font-mono rounded font-bold ${
+              t1Count > 0 ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {t1Count} PENDING
+            </span>
+          </div>
+          <p className="text-[11px] text-[#94A3B8] font-sans mt-2">
+            Control Room physical inspection & initial verification (VERIFIED / DISMISSED).
+          </p>
+        </button>
+
+        <button
+          onClick={() => { setActiveTier(2); setStatusMessage(null); }}
+          className={`p-3.5 rounded-lg border text-left transition-all ${
+            activeTier === 2
+              ? 'bg-[#151D25] border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.15)] text-white'
+              : 'bg-[#10161C] border-[#2A3540] text-slate-400 hover:bg-[#151D25]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center space-x-1.5">
+              <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-blue-400">2</span>
+              <span>Tier 2: Watch Officer</span>
+            </span>
+            <span className={`px-2 py-0.5 text-[10px] font-mono rounded font-bold ${
+              t2Count > 0 ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {t2Count} PENDING
+            </span>
+          </div>
+          <p className="text-[11px] text-[#94A3B8] font-sans mt-2">
+            Supervisory tactical review (CONFIRMED / RETURNED TO TIER 1).
+          </p>
+        </button>
+
+        <button
+          onClick={() => { setActiveTier(3); setStatusMessage(null); }}
+          className={`p-3.5 rounded-lg border text-left transition-all ${
+            activeTier === 3
+              ? 'bg-[#151D25] border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.15)] text-white'
+              : 'bg-[#10161C] border-[#2A3540] text-slate-400 hover:bg-[#151D25]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center space-x-1.5">
+              <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-purple-400">3</span>
+              <span>Tier 3: Chief Controller</span>
+            </span>
+            <span className={`px-2 py-0.5 text-[10px] font-mono rounded font-bold ${
+              t3Count > 0 ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {t3Count} PENDING
+            </span>
+          </div>
+          <p className="text-[11px] text-[#94A3B8] font-sans mt-2">
+            Public Safety Advisory release sign-off (APPROVED / REJECTED).
+          </p>
+        </button>
+      </div>
+
+      {/* Main Review Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: Pending Unverified Queue */}
+        {/* Left: Queue for Current Tier */}
         <div className="bg-[#151D25] border border-[#2A3540] rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-[#2A3540]">
             <span className="text-xs font-mono uppercase text-[#94A3B8] font-bold">
-              Unverified Queue ({unverifiedAlerts.length})
+              Tier {activeTier} Review Queue ({currentQueueList.length})
             </span>
-            <StatusBadge status="AWAITING REVIEW" variant="amber" />
+            <StatusBadge status="PENDING HITL" variant={activeTier === 1 ? 'amber' : activeTier === 2 ? 'blue' : 'gray'} />
           </div>
 
-          {unverifiedAlerts.length === 0 ? (
+          {currentQueueList.length === 0 ? (
             <div className="text-center py-12 text-[#94A3B8] text-xs">
               <ShieldCheck className="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-60" />
-              All alerts verified. No pending incidents.
+              No incidents pending Tier {activeTier} review.
             </div>
           ) : (
-            unverifiedAlerts.map((alt) => (
+            currentQueueList.map((item) => (
               <div
-                key={alt.id}
-                onClick={() => setSelectedAlert(alt)}
+                key={item.incident_id}
+                onClick={() => setSelectedItem(item)}
                 className={`p-3 rounded-md cursor-pointer border transition-all ${
-                  selectedAlert?.id === alt.id
-                    ? 'bg-[#1B2630] border-amber-500 text-white shadow-sm'
+                  selectedItem?.incident_id === item.incident_id
+                    ? 'bg-[#1B2630] border-emerald-500 text-white shadow-sm'
                     : 'bg-[#10161C] border-[#2A3540] text-slate-300 hover:bg-[#151D25]'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs mb-1 font-mono">
-                  <span className="font-bold text-amber-400">{alt.alert_code}</span>
-                  <StatusBadge status={alt.review_status} />
+                  <span className="font-bold text-emerald-400">{item.incident_code}</span>
+                  <StatusBadge status={item.status} />
                 </div>
-                <h4 className="text-xs font-semibold text-white">{alt.title}</h4>
+                <h4 className="text-xs font-semibold text-white line-clamp-1">{item.title}</h4>
                 <div className="mt-2 text-[10px] font-mono text-[#94A3B8] flex justify-between">
-                  <span>Severity: {alt.severity}</span>
-                  <span>{new Date(alt.created_at).toLocaleTimeString()}</span>
+                  <span>Priority: {item.severity}</span>
+                  <span>Conf: {(item.confidence_score * 100).toFixed(0)}%</span>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* Right: Inspection & Action Console */}
-        <div className="lg:col-span-2 bg-[#151D25] border border-[#2A3540] rounded-lg p-5 space-y-4">
-          {selectedAlert && linkedIncident ? (
-            <>
-              <div className="pb-3 border-b border-[#2A3540]">
-                <div className="flex items-center space-x-2 text-xs font-mono">
-                  <span className="font-bold text-emerald-400">{linkedIncident.incident_code}</span>
-                  <span className="text-[#94A3B8]">• Linked to {selectedAlert.alert_code}</span>
+        {/* Right: Decision Execution Panel */}
+        <div className="lg:col-span-2 bg-[#151D25] border border-[#2A3540] rounded-lg p-5">
+          {selectedItem ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#2A3540]">
+                <div>
+                  <span className="text-xs font-mono font-bold text-emerald-400">
+                    {selectedItem.incident_code}
+                  </span>
+                  <h3 className="text-base font-bold text-white mt-0.5">
+                    {selectedItem.title}
+                  </h3>
                 </div>
-                <h3 className="text-base font-bold text-white mt-0.5">{linkedIncident.title}</h3>
-                <p className="text-xs text-slate-300 mt-1">{linkedIncident.description}</p>
+                <div className="text-right font-mono text-xs">
+                  <span className="text-[#94A3B8] block text-[10px]">Current Status:</span>
+                  <StatusBadge status={selectedItem.status} />
+                </div>
               </div>
 
-              {/* Confidence & Uncertainty Metrics */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-[#10161C] p-3 rounded border border-[#2A3540] text-xs font-mono">
+              {/* Context Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono bg-[#10161C] p-3 rounded border border-[#2A3540]">
                 <div>
-                  <span className="text-[#94A3B8] block text-[10px]">AI Confidence:</span>
-                  <span className="text-emerald-400 font-bold">
-                    {(linkedIncident.confidence_score * 100).toFixed(0)}%
+                  <span className="text-[#94A3B8] block text-[10px]">Confidence:</span>
+                  <span className="text-emerald-400 font-bold">{(selectedItem.confidence_score * 100).toFixed(1)}%</span>
+                </div>
+                <div>
+                  <span className="text-[#94A3B8] block text-[10px]">Uncertainty:</span>
+                  <span className="text-amber-400 font-bold">{selectedItem.uncertainty_level}</span>
+                </div>
+                <div>
+                  <span className="text-[#94A3B8] block text-[10px]">Registered Tier:</span>
+                  <span className="text-white font-bold">Stage {activeTier} of 3</span>
+                </div>
+              </div>
+
+              {/* Prior Tier History if available */}
+              {activeTier >= 2 && selectedItem.tier1_rationale && (
+                <div className="bg-[#10161C] border border-[#2A3540] p-3 rounded text-xs space-y-1">
+                  <span className="text-emerald-400 font-mono font-bold block text-[10px] uppercase">
+                    Prior Tier 1 Operator Verification:
+                  </span>
+                  <p className="text-slate-300 font-sans italic">{selectedItem.tier1_rationale}</p>
+                </div>
+              )}
+
+              {activeTier === 3 && selectedItem.tier2_explanation && (
+                <div className="bg-[#10161C] border border-[#2A3540] p-3 rounded text-xs space-y-1">
+                  <span className="text-blue-400 font-mono font-bold block text-[10px] uppercase">
+                    Prior Tier 2 Watch Officer Confirmation:
+                  </span>
+                  <p className="text-slate-300 font-sans italic">{selectedItem.tier2_explanation}</p>
+                </div>
+              )}
+
+              {/* Rationale Input */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-mono text-[#94A3B8] uppercase font-bold">
+                    {activeTier === 1
+                      ? 'Operational Verification Rationale (Mandatory)'
+                      : activeTier === 2
+                      ? 'Supervisory Confirmation Rationale (Mandatory)'
+                      : 'Chief Controller Sign-Off Comments (Mandatory)'}
+                  </label>
+                  <span className={`font-mono text-[11px] ${
+                    rationale.trim().length >= 15 ? 'text-emerald-400' : 'text-amber-400'
+                  }`}>
+                    {rationale.trim().length} / 15 chars min
                   </span>
                 </div>
-                <div>
-                  <span className="text-[#94A3B8] block text-[10px]">Model Uncertainty:</span>
-                  <span className="text-amber-400 font-bold">{linkedIncident.uncertainty_level}</span>
-                </div>
-                <div>
-                  <span className="text-[#94A3B8] block text-[10px]">Triggered Heuristic:</span>
-                  <span className="text-slate-200 truncate block">{linkedIncident.triggered_rule}</span>
-                </div>
+                <textarea
+                  rows={3}
+                  value={rationale}
+                  onChange={(e) => setRationale(e.target.value)}
+                  placeholder={
+                    activeTier === 1
+                      ? "Describe physical visual corroboration of aggregate scene (min 15 characters)..."
+                      : activeTier === 2
+                      ? "Document tactical assessment and recommendation for advisory release (min 15 characters)..."
+                      : "Document executive authorization notes for public safety advisory release (min 15 characters)..."
+                  }
+                  className="w-full bg-[#10161C] text-slate-200 text-xs p-3 border border-[#2A3540] rounded font-sans focus:outline-none focus:border-emerald-500"
+                ></textarea>
               </div>
 
-              {/* Explainable Summary */}
-              <div className="bg-[#10161C] border border-[#2A3540] rounded p-3 text-xs text-slate-200">
-                <span className="font-mono text-emerald-400 font-bold block mb-1">
-                  Explainable Alert Summary:
-                </span>
-                {linkedIncident.explanation}
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-between border-t border-[#2A3540]">
+                <div className="text-[11px] font-mono text-[#94A3B8]">
+                  Submitting as badge: <span className="text-emerald-400 font-bold">{activeBadge}</span>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  {activeTier === 1 && (
+                    <>
+                      <button
+                        onClick={() => handleTier1('DISMISSED')}
+                        disabled={isSubmitting}
+                        className="px-4 py-2 bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800 rounded text-xs font-mono font-bold transition-all disabled:opacity-50"
+                      >
+                        DISMISS INCIDENT
+                      </button>
+                      <button
+                        onClick={() => handleTier1('VERIFIED')}
+                        disabled={isSubmitting}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded text-xs font-mono font-bold transition-all shadow-sm disabled:opacity-50"
+                      >
+                        VERIFY INCIDENT (TIER 1) &rarr;
+                      </button>
+                    </>
+                  )}
+
+                  {activeTier === 2 && (
+                    <>
+                      <button
+                        onClick={() => handleTier2('RETURNED')}
+                        disabled={isSubmitting}
+                        className="px-4 py-2 bg-amber-950/70 hover:bg-amber-900 text-amber-300 border border-amber-800 rounded text-xs font-mono font-bold transition-all disabled:opacity-50"
+                      >
+                        RETURN TO TIER 1
+                      </button>
+                      <button
+                        onClick={() => handleTier2('CONFIRMED')}
+                        disabled={isSubmitting}
+                        className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold transition-all shadow-sm disabled:opacity-50"
+                      >
+                        CONFIRM INCIDENT (TIER 2) &rarr;
+                      </button>
+                    </>
+                  )}
+
+                  {activeTier === 3 && (
+                    <>
+                      <button
+                        onClick={() => handleTier3('REJECTED')}
+                        disabled={isSubmitting}
+                        className="px-4 py-2 bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800 rounded text-xs font-mono font-bold transition-all disabled:opacity-50"
+                      >
+                        REJECT ADVISORY
+                      </button>
+                      <button
+                        onClick={() => handleTier3('APPROVED')}
+                        disabled={isSubmitting}
+                        className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-mono font-bold transition-all shadow-sm disabled:opacity-50"
+                      >
+                        APPROVE ADVISORY RELEASE (TIER 3) &rarr;
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-
-              {/* Reviewer Action Form */}
-              <div className="space-y-3 pt-1">
-                <div>
-                  <label className="block text-xs font-mono text-[#94A3B8] mb-1">
-                    Reviewer Badge ID:
-                  </label>
-                  <input
-                    type="text"
-                    value={reviewerBadge}
-                    onChange={(e) => setReviewerBadge(e.target.value)}
-                    className="w-full sm:w-64 bg-[#10161C] text-slate-200 text-xs font-mono border border-[#2A3540] rounded px-3 py-1.5 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-sans text-[#94A3B8] mb-1 font-medium">
-                    Operational Review Rationale / Notes (Mandatory for Tamper-Evident Audit Trail):
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="E.g., Officer inspected visual CCTV feed; verified localized crowd congestion caused by platform train arrival..."
-                    value={rationale}
-                    onChange={(e) => setRationale(e.target.value)}
-                    className="w-full bg-[#10161C] text-slate-200 text-xs font-sans border border-[#2A3540] rounded p-3 focus:outline-none focus:border-emerald-500"
-                  ></textarea>
-                </div>
-
-                {/* 3 Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <button
-                    disabled={isSubmitting}
-                    onClick={() => handleAction('VERIFIED')}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold font-sans rounded flex items-center space-x-1.5 transition-all shadow"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Verify Incident</span>
-                  </button>
-
-                  <button
-                    disabled={isSubmitting}
-                    onClick={() => handleAction('DISMISSED')}
-                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold font-sans rounded flex items-center space-x-1.5 transition-all shadow"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Dismiss / False Alarm</span>
-                  </button>
-
-                  <button
-                    disabled={isSubmitting}
-                    onClick={() => handleAction('ESCALATED')}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold font-sans rounded flex items-center space-x-1.5 transition-all shadow"
-                  >
-                    <ArrowUpRight className="w-4 h-4" />
-                    <span>Escalate Incident</span>
-                  </button>
-                </div>
-              </div>
-            </>
+            </div>
           ) : (
             <div className="text-center py-20 text-[#94A3B8] text-xs">
-              Select an unverified alert from the queue to conduct human review.
+              <FileText className="w-10 h-10 mx-auto text-slate-600 mb-2" />
+              Select an incident from the queue on the left to begin Tier {activeTier} review.
             </div>
           )}
         </div>
