@@ -76,6 +76,23 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0D0E] text-[#F1F5F9] flex flex-col font-sans selection:bg-emerald-800 selection:text-white">
+      {/* Explicit Public Demonstration Safeguard Banner */}
+      <div className="bg-amber-950/40 border-b border-amber-600/30 px-4 py-1.5 flex flex-wrap items-center justify-between text-xs font-mono text-amber-300">
+        <div className="flex items-center space-x-2">
+          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold tracking-wider text-[10px] border border-amber-500/40">
+            DEMONSTRATION SYSTEM
+          </span>
+          <span className="font-semibold tracking-tight text-[11px] sm:text-xs text-amber-300">
+            SYNTHETIC DEMO — NOT REAL-WORLD MONITORING • ZERO BIOMETRICS • ZERO AUTONOMOUS DISPATCH
+          </span>
+        </div>
+        <div className="hidden lg:flex items-center space-x-3 text-[11px] text-amber-400/80">
+          <span>Human-in-the-Loop Decision Support Prototype</span>
+          <span>•</span>
+          <span>Educational Technology</span>
+        </div>
+      </div>
+
       {/* Modern Enterprise SOC Top Header */}
       <Header
         health={health}

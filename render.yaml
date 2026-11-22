@@ -1,0 +1,41 @@
+# ==============================================================================
+# OPERATION PRAHAAR AI — Render Blueprint Deployment Specification
+# ==============================================================================
+# FastAPI Backend Web Service for Zero-Cost Demonstration
+# ==============================================================================
+
+services:
+  - type: web
+    name: operation-prahaar-ai-backend
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "pip install -r requirements.txt && python scripts/seed_database.py"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: "OPERATION PRAHAAR AI"
+      - key: APP_VERSION
+        value: "1.0.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: "sqlite:///./prahaar.db"
+      - key: DEMO_CONTROLLER_ENABLED
+        value: "true"
+      - key: DEMO_RESET_ALLOWED
+        value: "false"
+      - key: CORS_ORIGIN_REGEX
+        value: "https://.*\\.vercel\\.app"
+      - key: RAW_FRAME_PERSISTENCE
+        value: "false"
+      - key: PRIVACY_PRESERVING_MODE
+        value: "true"
+      - key: ENABLE_FACIAL_RECOGNITION
+        value: "false"

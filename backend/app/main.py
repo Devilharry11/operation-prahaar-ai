@@ -20,10 +20,11 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Enable CORS for local React Command Center dashboard
+# Enable CORS for local and production Command Center dashboard
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
