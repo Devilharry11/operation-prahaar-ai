@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.models.entities import Incident
 from backend.app.schemas.incident import IncidentCreate, IncidentRead
+from backend.app.schemas.xai import IncidentExplainabilityResponse
+from backend.app.services.xai import XAIService
 
 router = APIRouter(tags=["Incidents"])
 
@@ -35,3 +37,12 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return incident
+
+
+@router.get("/incidents/{incident_id}/explainability", response_model=IncidentExplainabilityResponse)
+def get_incident_explainability(incident_id: str, db: Session = Depends(get_db)):
+    """
+    Retrieve transparent, rule-based Explainable AI (XAI) breakdown for an incident.
+    Outputs input values, applied calculation rule, uncertainty level, and data quality.
+    """
+    return XAIService.explain_incident(db=db, incident_id=incident_id)
